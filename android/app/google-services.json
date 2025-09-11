@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "426822002002",
+    "project_id": "vetclick-b41a6",
+    "storage_bucket": "vetclick-b41a6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:426822002002:android:a341eb5185d88e11b2068b",
+        "android_client_info": {
+          "package_name": "com.example.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBacqagNXw9bClCKeWmEIah4P_X7Ih97DM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
