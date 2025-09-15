@@ -1,4 +1,5 @@
 import 'package:app/services/firebase_auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget{
@@ -33,30 +34,54 @@ class _LoginScreen extends State<LoginScreen>{
           ),
         ),
       );
-    }on Exception catch(e){
+    }on FirebaseAuthException catch(e){
       setState(() {
-        isLoading = false;
-        if(e.toString().contains('user-not-found')){
-          emailTextError = 'No user found for that email.';
-        }else if(e.toString().contains('wrong-password')){
-          passwordTextError = 'Wrong password provided for that user.';
-        }else if(e.toString().contains('invalid-email')){
-          emailTextError = 'The email address is not valid.';
-        }else if(e.toString().contains('too-many-requests')){
-          emailTextError = 'Too many requests. Try again later.';
-        }else{
-          emailTextError = 'An undefined Error happened.';
-        }
+        emailTextError = "Usuário ou senha inválidos";
+        passwordTextError = "Usuário ou senha inválidos";
+
       });
+
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Text('Tela de Login'),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Image.asset('assets/images/logo.jpeg', height: 100),
+            const SizedBox(height: 200),
+            TextFormField(
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: 'Digite o seu Email',
+                prefixIcon: const Icon(
+                  Icons.email,
+                  color: Color(0xFF8C7A3E)
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Color(0xFF8C7A3E),
+                      width: 1),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                errorText: emailTextError,
+              ),
+            )
+          ],
+        ),
       ),
     );
+
   }
 }
