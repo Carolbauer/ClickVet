@@ -53,8 +53,7 @@ class _LoginScreen extends State<LoginScreen>{
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Image.asset('assets/images/logo.jpeg', height: 100),
-            const SizedBox(height: 200),
+            Image.asset('assets/images/logo1.png', height: 200),
             TextFormField(
               controller: emailController,
               keyboardType: TextInputType.emailAddress,
@@ -70,12 +69,57 @@ class _LoginScreen extends State<LoginScreen>{
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(
                       color: Color(0xFF8C7A3E),
-                      width: 1),
+                      width: 1
+                  ),
                 ),
-                border: OutlineInputBorder(
+                focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Color(0xFF6E5F2F),
+                      width: 2,
+                  ),
                 ),
                 errorText: emailTextError,
+              ),
+            ),
+             SizedBox(height: 16),
+            TextFormField(
+              controller: passwordController,
+              obscureText: !isVisible,
+              decoration: InputDecoration(
+                labelText: 'Digite a sua Senha',
+                prefixIcon: const Icon(
+                  Icons.lock,
+                  color: Color(0xFF8C7A3E)
+                ),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    isVisible ? Icons.visibility : Icons.visibility_off,
+                    color: const Color(0xFF8C7A3E),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      isVisible = !isVisible;
+                    });
+                  },
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Color(0xFF8C7A3E),
+                      width: 1
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Color(0xFF6E5F2F),
+                      width: 2,
+                  ),
+                ),
+                errorText: passwordTextError,
               ),
             )
           ],
