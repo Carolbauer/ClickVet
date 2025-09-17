@@ -122,7 +122,7 @@ class _LoginScreen extends State<LoginScreen> {
             ),
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton(
+              child: TextButton.icon(
                 onPressed: () async {
                   final email = emailController.text.trim();
                   if (email.isEmpty) {
@@ -148,9 +148,13 @@ class _LoginScreen extends State<LoginScreen> {
                     );
                   }
                 },
-                child: const Text(
+                label: const Text(
                   'Esqueci minha senha?',
-                  style: TextStyle(color: Colors.black54),
+                  style: TextStyle(
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w600,
+                      decoration:TextDecoration.underline,
+                  ),
                 ),
               ),
             ),
@@ -200,7 +204,70 @@ class _LoginScreen extends State<LoginScreen> {
                       ),
                   )
               ),)
-            )
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: Container(height: 1,color: Colors.black26,)),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text(
+                    'ou entre com',
+                    style: TextStyle(color: Colors.black54),
+                  ),
+                ),
+                Expanded(child: Container(height: 1,color: Colors.black26,)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 50,
+              child: OutlinedButton.icon(
+                  onPressed: isLoading ? null : () {
+                    // Implement Google Sign-In
+                  },
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFFE0E0E0)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                icon: Padding(padding: const EdgeInsets.only(right: 8.0),
+                  child: Image.asset('assets/images/google_logo.png',
+                      width: 18, height: 18,
+                  ),
+                ), label: const Text(
+                  'Entrar com Google',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w600,
+                  ),),
+                ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'Não possui uma conta?',
+                  style: TextStyle(color: Colors.black54),
+                ),
+                TextButton(
+                  onPressed: () {
+                    // Navigate to registration screen
+                  },
+                  child: const Text(
+                    'Cadastre-se',
+                    style: TextStyle(
+                      color: Color(0xFF8C7A3E),
+                      fontWeight: FontWeight.w700,
+                        decoration:TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
