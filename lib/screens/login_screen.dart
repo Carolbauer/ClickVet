@@ -1,3 +1,4 @@
+import 'package:app/screens/home_screen.dart';
 import 'package:app/services/firebase_auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -28,11 +29,7 @@ class _LoginScreen extends State<LoginScreen> {
       await firebaseAuth.makeLogin(email, password);
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const Scaffold(
-            body: Center(child: Text('Logged In Successfully!')),
-          ),
-        ),
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } on FirebaseAuthException catch (e) {
       setState(() {
