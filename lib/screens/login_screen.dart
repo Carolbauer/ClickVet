@@ -1,4 +1,5 @@
 import 'package:app/screens/home_screen.dart';
+import 'package:app/screens/register_screen.dart';
 import 'package:app/services/firebase_auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -252,7 +253,12 @@ class _LoginScreen extends State<LoginScreen> {
                 ),
                 TextButton(
                   onPressed: () {
-                    // Navigate to registration screen
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const RegisterScreen(),
+                        ),
+                    );
                   },
                   child: const Text(
                     'Cadastre-se',
