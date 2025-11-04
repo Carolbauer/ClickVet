@@ -1,3 +1,4 @@
+import 'package:app/screens/register_tutor_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -81,6 +82,13 @@ class _HomeScreenState extends State<HomeScreen> {
           drawer: AppDrawer(
             userName: name,
             crmv: crmv,
+            onTutorPatients: () {
+              Navigator.pop(context);
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RegisterTutorScreen()),
+              );
+            },
             onLogout: () => Navigator.pop(context),
           ),
           body: SafeArea(

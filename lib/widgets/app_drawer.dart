@@ -9,6 +9,7 @@ class AppDrawer extends StatelessWidget {
     this.onAgenda,
     this.onNewAppointment,
     this.onPatients,
+    this.onTutorPatients,
     this.onSettings,
     this.onLogout,
   });
@@ -20,6 +21,7 @@ class AppDrawer extends StatelessWidget {
   final VoidCallback? onAgenda;
   final VoidCallback? onNewAppointment;
   final VoidCallback? onPatients;
+  final VoidCallback? onTutorPatients;
   final VoidCallback? onSettings;
   final VoidCallback? onLogout;
 
@@ -66,6 +68,7 @@ class AppDrawer extends StatelessWidget {
                 _item(Icons.calendar_month_outlined, 'Agenda', onAgenda),
                 _item(Icons.add_circle_outline, 'Nova Consulta', onNewAppointment),
                 _item(Icons.pets_outlined, 'Pacientes', onPatients),
+                _item(Icons.person_2_rounded, 'Tutores', onTutorPatients),
                 const Divider(height: 24),
                 _item(Icons.settings_outlined, 'Configurações', onSettings),
                 _item(Icons.logout, 'Sair', onLogout, iconColor: kGoldDark),
