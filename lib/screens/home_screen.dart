@@ -1,13 +1,15 @@
 import 'package:app/screens/register_tutor_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:app/screens/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:app/widgets/app_drawer.dart';
 import '../services/firebase_user_service.dart';
 
-const kCreme = Color(0xFFF7F2E6);
-const kGold = Color(0xFF8C7A3E);
-const kGoldDark = Color(0xFF6E5F2F);
+const kBg      = Color(0xFFF5F2ED);
+const kGold    = Color(0xFFB8860B);
+const kGoldLt  = Color(0xFFD4AF37);
+const kGoldDark  = Color(0xFF8B6914);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -52,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (user == null) {
       return const Scaffold(
-        backgroundColor: kCreme,
+        backgroundColor: kBg,
         body: Center(child: Text('Nenhum usuário logado.')),
       );
     }
@@ -62,13 +64,13 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            backgroundColor: kCreme,
+            backgroundColor: kBg,
             body: Center(child: CircularProgressIndicator()),
           );
         }
         if (!snap.hasData || !snap.data!.exists) {
           return const Scaffold(
-            backgroundColor: kCreme,
+            backgroundColor: kBg,
             body: Center(child: Text('Perfil não encontrado.')),
           );
         }
@@ -78,18 +80,55 @@ class _HomeScreenState extends State<HomeScreen> {
         final String crmv = (data['crmv'] ?? '-') as String;
 
         return Scaffold(
-          backgroundColor: kCreme,
+          backgroundColor: kBg,
           drawer: AppDrawer(
             userName: name,
             crmv: crmv,
+            selectedKey: DrawerItemKey.home,
+            onLogout: () async {
+              Navigator.pop(context);
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text('Sair'),
+                  content: const Text('Deseja realmente sair da sua conta?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancelar'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Sair'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm != true) return;
+
+              try {
+                await FirebaseAuth.instance.signOut();
+                if (!mounted) return;
+
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => LoginScreen()), // sem const
+                      (route) => false,
+                );
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Erro ao sair: $e')),
+                );
+              }
+            },
             onTutorPatients: () {
               Navigator.pop(context);
               Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RegisterTutorScreen()),
+                context,
+                MaterialPageRoute(builder: (_) => const RegisterTutorScreen()),
               );
             },
-            onLogout: () => Navigator.pop(context),
           ),
           body: SafeArea(
             child: SingleChildScrollView(

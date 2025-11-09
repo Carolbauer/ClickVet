@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
-const kCream = Color(0xFFF5F1E6); // creme do mock
+const kBg = Color(0xFFF5F2ED); // creme do mock
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,23 +33,23 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        scaffoldBackgroundColor: kCream,
+        scaffoldBackgroundColor: kBg,
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF8C7A3E),
           brightness: Brightness.light,
         ).copyWith(
-          background: kCream,
-          surface: kCream,
+          background: kBg,
+          surface: kBg,
           onBackground: Colors.black87,
           onSurface: Colors.black87,
         ),
-        canvasColor: kCream,
+        canvasColor: kBg,
         appBarTheme: const AppBarTheme(
-          backgroundColor: kCream,
+          backgroundColor: kBg,
           elevation: 0,
           foregroundColor: Colors.black87,
           systemOverlayStyle: SystemUiOverlayStyle(
-            statusBarColor: kCream,
+            statusBarColor: kBg,
             statusBarIconBrightness: Brightness.dark,
             statusBarBrightness: Brightness.light,
           ),

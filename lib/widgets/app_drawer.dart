@@ -1,15 +1,29 @@
 import 'package:flutter/material.dart';
 
+enum DrawerItemKey {
+  home,
+  agenda,
+  newAppointment,
+  patients,
+  tutors,
+  petRegister,
+  profile,
+  settings,
+}
+
 class AppDrawer extends StatelessWidget {
   const AppDrawer({
     super.key,
     required this.userName,
     required this.crmv,
+    this.selectedKey,
     this.onHome,
     this.onAgenda,
     this.onNewAppointment,
     this.onPatients,
     this.onTutorPatients,
+    this.onPetRegister,
+    this.onProfile,
     this.onSettings,
     this.onLogout,
   });
@@ -17,16 +31,23 @@ class AppDrawer extends StatelessWidget {
   final String userName;
   final String crmv;
 
+  final DrawerItemKey? selectedKey;
+
   final VoidCallback? onHome;
   final VoidCallback? onAgenda;
   final VoidCallback? onNewAppointment;
   final VoidCallback? onPatients;
   final VoidCallback? onTutorPatients;
+  final VoidCallback? onPetRegister;
+  final VoidCallback? onProfile;
   final VoidCallback? onSettings;
   final VoidCallback? onLogout;
 
-  static const kGold = Color(0xFF8C7A3E);
-  static const kGoldDark = Color(0xFF6E5F2F);
+  // ClickVet cores
+  static const kCvPrimary   = Color(0xFFB8860B); // dourado médio
+  static const kCvLight     = Color(0xFFD4AF37); // dourado claro
+  static const kCvSecondary = Color(0xFF8B6914); // dourado escuro
+  static const kGoldDark    = Color(0xFF8B6914);
 
   @override
   Widget build(BuildContext context) {
@@ -36,25 +57,33 @@ class AppDrawer extends StatelessWidget {
           DrawerHeader(
             margin: EdgeInsets.zero,
             padding: EdgeInsets.zero,
-            decoration: const BoxDecoration(color: kGold),
-            child: SafeArea(
-              bottom: false,
-              child: ListTile(
-                leading: CircleAvatar(
-                  radius: 26,
-                  backgroundColor: Colors.white.withOpacity(.2),
-                  child: const Icon(Icons.person, size: 32, color: Colors.white),
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [kCvLight, kCvPrimary],
                 ),
-                title: Text(
-                  userName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text('CRMV: $crmv', style: const TextStyle(color: Colors.white70)),
-                trailing: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.of(context).pop(),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: ListTile(
+                  leading: CircleAvatar(
+                    radius: 26,
+                    backgroundColor: Colors.white.withOpacity(.2),
+                    child: const Icon(Icons.person, size: 32, color: Colors.white),
+                  ),
+                  title: Text(
+                    userName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text('CRMV: ', style: TextStyle(color: Colors.white70)),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                 ),
               ),
             ),
@@ -64,14 +93,73 @@ class AppDrawer extends StatelessWidget {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                _item(Icons.home_outlined, 'Home', onHome),
-                _item(Icons.calendar_month_outlined, 'Agenda', onAgenda),
-                _item(Icons.add_circle_outline, 'Nova Consulta', onNewAppointment),
-                _item(Icons.pets_outlined, 'Pacientes', onPatients),
-                _item(Icons.person_2_rounded, 'Tutores', onTutorPatients),
+                _item(
+                  context,
+                  keyItem: DrawerItemKey.home,
+                  icon: Icons.home_outlined,
+                  label: 'Home',
+                  onTap: onHome,
+                ),
+                _item(
+                  context,
+                  keyItem: DrawerItemKey.agenda,
+                  icon: Icons.calendar_month_outlined,
+                  label: 'Agenda',
+                  onTap: onAgenda,
+                ),
+                _item(
+                  context,
+                  keyItem: DrawerItemKey.newAppointment,
+                  icon: Icons.add_circle_outline,
+                  label: 'Nova Consulta',
+                  onTap: onNewAppointment,
+                ),
+                _item(
+                  context,
+                  keyItem: DrawerItemKey.patients,
+                  icon: Icons.pets_outlined,
+                  label: 'Pacientes',
+                  onTap: onPatients,
+                ),
+                _item(
+                  context,
+                  keyItem: DrawerItemKey.tutors,
+                  icon: Icons.person_2_rounded,
+                  label: 'Tutores',
+                  onTap: onTutorPatients,
+                ),
+                if (onPetRegister != null)
+                  _item(
+                    context,
+                    keyItem: DrawerItemKey.petRegister,
+                    icon: Icons.favorite_border,
+                    label: 'Cadastrar Pet',
+                    onTap: onPetRegister,
+                  ),
+                if (onProfile != null)
+                  _item(
+                    context,
+                    keyItem: DrawerItemKey.profile,
+                    icon: Icons.person_outline,
+                    label: 'Meu Perfil',
+                    onTap: onProfile,
+                  ),
+
                 const Divider(height: 24),
-                _item(Icons.settings_outlined, 'Configurações', onSettings),
-                _item(Icons.logout, 'Sair', onLogout, iconColor: kGoldDark),
+
+                _item(
+                  context,
+                  keyItem: DrawerItemKey.settings,
+                  icon: Icons.settings_outlined,
+                  label: 'Configurações',
+                  onTap: onSettings,
+                ),
+
+                ListTile(
+                  leading: const Icon(Icons.logout, color: kGoldDark),
+                  title: const Text('Sair', style: TextStyle(fontWeight: FontWeight.w600)),
+                  onTap: onLogout,
+                ),
               ],
             ),
           ),
@@ -80,11 +168,24 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  ListTile _item(IconData icon, String label, VoidCallback? onTap, {Color iconColor = kGold}) {
+  ListTile _item(
+      BuildContext context, {
+        required DrawerItemKey keyItem,
+        required IconData icon,
+        required String label,
+        VoidCallback? onTap,
+      }) {
+    final bool isSelected = selectedKey == keyItem;
+
     return ListTile(
-      leading: Icon(icon, color: iconColor),
-      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-      onTap: onTap,
+      leading: Icon(icon, color: kCvSecondary),
+      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+      tileColor: isSelected ? kCvPrimary.withOpacity(0.10) : null,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onTap: () {
+        Navigator.of(context).pop();
+        onTap?.call();
+      },
     );
   }
 }
