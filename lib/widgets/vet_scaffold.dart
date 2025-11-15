@@ -3,6 +3,7 @@ import 'package:app/screens/login_screen.dart';
 import 'package:app/services/firebase_user_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../screens/register_pet_screen.dart';
 import '../theme/clickvet_colors.dart';
 
 
@@ -63,6 +64,13 @@ class VetScaffold extends StatelessWidget {
             selectedKey: selectedKey,
             onHome: () => Navigator.pop(context),
             onTutorPatients: () {},
+            onPetRegister: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const RegisterPetScreen(),
+                ),
+              );
+            },
             onSettings: () {},
             onLogout: () async {
               Navigator.pop(context);

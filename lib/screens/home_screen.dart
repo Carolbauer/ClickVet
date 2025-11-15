@@ -6,6 +6,7 @@ import 'package:app/screens/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:app/widgets/app_drawer.dart';
 import '../services/firebase_user_service.dart';
+import 'package:app/screens/register_pet_screen.dart';
 
 const kBg      = Color(0xFFF5F2ED);
 const kGold    = Color(0xFFB8860B);
@@ -128,6 +129,13 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const TutorListScreen()),
+              );
+            },
+            onPetRegister: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const RegisterPetScreen(),
+                ),
               );
             },
           ),

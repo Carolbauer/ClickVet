@@ -116,8 +116,15 @@ class AppDrawer extends StatelessWidget {
                 ),
                 _item(
                   context,
-                  keyItem: DrawerItemKey.patients,
+                  keyItem: DrawerItemKey.petRegister,
                   icon: Icons.pets_outlined,
+                  label: 'Cadastrar Pet',
+                  onTap: onPetRegister,
+                ),
+                _item(
+                  context,
+                  keyItem: DrawerItemKey.patients,
+                  icon: Icons.pets_sharp,
                   label: 'Pacientes',
                   onTap: onPatients,
                 ),
@@ -128,14 +135,6 @@ class AppDrawer extends StatelessWidget {
                   label: 'Tutores',
                   onTap: onTutorPatients,
                 ),
-                if (onPetRegister != null)
-                  _item(
-                    context,
-                    keyItem: DrawerItemKey.petRegister,
-                    icon: Icons.favorite_border,
-                    label: 'Cadastrar Pet',
-                    onTap: onPetRegister,
-                  ),
                 if (onProfile != null)
                   _item(
                     context,

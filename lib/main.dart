@@ -1,10 +1,11 @@
 import 'package:app/screens/login_screen.dart';
 import 'package:app/services/firebase_auth_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // <- p/ status bar
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'screens/register_pet_screen.dart';
 
 const kBg = Color(0xFFF5F2ED); // creme do mock
 
@@ -69,6 +70,9 @@ class MyApp extends StatelessWidget {
         textTheme: textTheme,
       ),
       home: LoginScreen(),
+      routes: {
+        RegisterPetScreen.routeName: (_) => const RegisterPetScreen(),
+      },
     );
   }
 }

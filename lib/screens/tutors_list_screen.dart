@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:app/screens/register_tutor_screen.dart';
-
 import '../theme/clickvet_colors.dart';
 import '../widgets/vet_scaffold.dart';
 
