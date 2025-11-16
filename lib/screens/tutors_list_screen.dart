@@ -70,14 +70,12 @@ class _TutorListScreenState extends State<TutorListScreen> {
           ),
         ),
         centerTitle: true,
-        // Menu do drawer à esquerda (igual outras telas)
         leading: Builder(
           builder: (ctx) => IconButton(
             icon: const Icon(Icons.menu, color: ClickVetColors.goldDark),
             onPressed: () => Scaffold.of(ctx).openDrawer(),
           ),
         ),
-        // Botão de voltar à direita
         actions: [
           IconButton(
             icon: const Icon(
@@ -85,7 +83,6 @@ class _TutorListScreenState extends State<TutorListScreen> {
               color: ClickVetColors.goldDark,
             ),
             onPressed: () {
-              // Em vez de pop(), volta explicitamente pra Home
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(
                   builder: (_) => const HomeScreen(),
@@ -100,7 +97,6 @@ class _TutorListScreenState extends State<TutorListScreen> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: Column(
             children: [
-              // ---------- CAMPO DE BUSCA ----------
               TextField(
                 controller: _search,
                 onChanged: (value) {
@@ -140,7 +136,6 @@ class _TutorListScreenState extends State<TutorListScreen> {
 
               const SizedBox(height: 12),
 
-              // ---------- BOTÃO NOVO TUTOR ----------
               SizedBox(
                 height: 48,
                 width: double.infinity,
@@ -181,7 +176,6 @@ class _TutorListScreenState extends State<TutorListScreen> {
 
               const SizedBox(height: 12),
 
-              // ---------- LISTA + STATS + PAGINAÇÃO ----------
               Expanded(
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: _stream(vet.uid),
@@ -196,7 +190,6 @@ class _TutorListScreenState extends State<TutorListScreen> {
 
                     final docs = snap.data?.docs ?? [];
 
-                    // Filtro da busca
                     final filtered = docs.where((d) {
                       if (_query.isEmpty) return true;
                       final m = d.data();
