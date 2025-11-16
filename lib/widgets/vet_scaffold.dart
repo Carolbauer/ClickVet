@@ -1,10 +1,11 @@
-import 'package:app/screens/tutors_list_screen.dart';
 import 'package:app/widgets/app_drawer.dart';
 import 'package:app/screens/login_screen.dart';
 import 'package:app/services/firebase_user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
+import '../screens/home_screen.dart';
 import '../screens/register_pet_screen.dart';
 import '../theme/clickvet_colors.dart';
 
@@ -79,22 +80,35 @@ class _VetScaffoldState extends State<VetScaffold> {
             userName: name,
             crmv: crmv,
             selectedKey: widget.selectedKey,
-            onHome: () => Navigator.pop(context),
-            onTutorPatients: () {
+
+            onHome: () {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const TutorListScreen()),
+              if (widget.selectedKey == DrawerItemKey.home) {
+                return;
+              }
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    (route) => false,
               );
             },
+
+            onTutorPatients: () {
+              Navigator.pop(context);
+            },
+
             onPetRegister: () {
+              Navigator.pop(context);
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => const RegisterPetScreen(),
                 ),
               );
             },
-            onSettings: () {},
+
+            onSettings: () {
+              Navigator.pop(context);
+            },
+
             onLogout: () async {
               Navigator.pop(context);
               try {
