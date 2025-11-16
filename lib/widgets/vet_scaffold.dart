@@ -1,13 +1,14 @@
+import 'package:app/screens/tutors_list_screen.dart';
 import 'package:app/widgets/app_drawer.dart';
 import 'package:app/screens/login_screen.dart';
 import 'package:app/services/firebase_user_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../screens/register_pet_screen.dart';
 import '../theme/clickvet_colors.dart';
 
-
-class VetScaffold extends StatelessWidget {
+class VetScaffold extends StatefulWidget {
   const VetScaffold({
     super.key,
     required this.selectedKey,
@@ -22,11 +23,27 @@ class VetScaffold extends StatelessWidget {
   final Widget? bottomNavigationBar;
 
   @override
-  Widget build(BuildContext context) {
-    final userService = UserService();
-    final vet = FirebaseAuth.instance.currentUser;
+  State<VetScaffold> createState() => _VetScaffoldState();
+}
 
-    if (vet == null) {
+class _VetScaffoldState extends State<VetScaffold> {
+  final UserService _userService = UserService();
+  Stream<DocumentSnapshot<Map<String, dynamic>>>? _userStream;
+  User? _vet;
+
+  @override
+  void initState() {
+    super.initState();
+    _vet = FirebaseAuth.instance.currentUser;
+
+    if (_vet != null) {
+      _userStream = _userService.streamUser(_vet!.uid);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_vet == null) {
       return const Scaffold(
         backgroundColor: ClickVetColors.bg,
         body: Center(
@@ -35,8 +52,8 @@ class VetScaffold extends StatelessWidget {
       );
     }
 
-    return StreamBuilder(
-      stream: userService.streamUser(vet.uid),
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: _userStream,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -52,18 +69,24 @@ class VetScaffold extends StatelessWidget {
           );
         }
 
-        final data = snap.data!.data() as Map<String, dynamic>;
+        final data = snap.data!.data()!;
         final name = (data['name'] ?? 'Veterinário') as String;
         final crmv = (data['crmv'] ?? '-') as String;
 
         return Scaffold(
-            backgroundColor: ClickVetColors.bg,
+          backgroundColor: ClickVetColors.bg,
           drawer: AppDrawer(
             userName: name,
             crmv: crmv,
-            selectedKey: selectedKey,
+            selectedKey: widget.selectedKey,
             onHome: () => Navigator.pop(context),
-            onTutorPatients: () {},
+            onTutorPatients: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TutorListScreen()),
+              );
+            },
             onPetRegister: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -76,21 +99,22 @@ class VetScaffold extends StatelessWidget {
               Navigator.pop(context);
               try {
                 await FirebaseAuth.instance.signOut();
-                if (!context.mounted) return;
+                if (!mounted) return;
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                       (route) => false,
                 );
               } catch (e) {
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Erro ao sair: $e')),
                 );
               }
             },
           ),
-          appBar: appBar,
-          body: body,
-          bottomNavigationBar: bottomNavigationBar,
+          appBar: widget.appBar,
+          body: widget.body,
+          bottomNavigationBar: widget.bottomNavigationBar,
         );
       },
     );
