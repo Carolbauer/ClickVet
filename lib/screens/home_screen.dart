@@ -1,3 +1,4 @@
+import 'package:app/screens/patients_screen.dart';
 import 'package:app/screens/register_tutor_screen.dart';
 import 'package:app/screens/tutors_list_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -114,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (!mounted) return;
 
                 Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => LoginScreen()), // sem const
+                  MaterialPageRoute(builder: (_) => LoginScreen()),
                       (route) => false,
                 );
               } catch (e) {
@@ -135,6 +136,14 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => const RegisterPetScreen(),
+                ),
+              );
+            },
+            onPatients: (){
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const PatientsScreen(),
                 ),
               );
             },
@@ -228,7 +237,17 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: Colors.white.withOpacity(0.85),
             indicatorColor: kGold.withOpacity(0.12),
             selectedIndex: _currentIndex,
-            onDestinationSelected: (i) => setState(() => _currentIndex = i),
+            onDestinationSelected: (i) {
+              setState(() => _currentIndex = i);
+
+              if (i == 3) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const PatientsScreen(),
+                  ),
+                );
+              }
+            },
             destinations: const [
               NavigationDestination(
                 icon: Icon(Icons.home_outlined),

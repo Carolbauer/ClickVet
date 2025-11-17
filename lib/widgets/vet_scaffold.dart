@@ -1,3 +1,4 @@
+import 'package:app/screens/patients_screen.dart';
 import 'package:app/widgets/app_drawer.dart';
 import 'package:app/screens/login_screen.dart';
 import 'package:app/services/firebase_user_service.dart';
@@ -94,6 +95,11 @@ class _VetScaffoldState extends State<VetScaffold> {
 
             onTutorPatients: () {
               Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const PatientsScreen(),
+                ),
+              );
             },
 
             onPetRegister: () {
@@ -101,6 +107,15 @@ class _VetScaffoldState extends State<VetScaffold> {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => const RegisterPetScreen(),
+                ),
+              );
+            },
+
+            onPatients: (){
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const PatientsScreen(),
                 ),
               );
             },
