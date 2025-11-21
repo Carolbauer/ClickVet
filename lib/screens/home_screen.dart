@@ -1,3 +1,4 @@
+import 'package:app/screens/agenda_screen.dart';
 import 'package:app/screens/patients_screen.dart';
 import 'package:app/screens/register_tutor_screen.dart';
 import 'package:app/screens/tutors_list_screen.dart';
@@ -147,6 +148,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               );
             },
+            onAgenda: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const AgendaScreen(),
+                ),
+              );
+            },
           ),
           body: SafeArea(
             child: SingleChildScrollView(
@@ -205,7 +214,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   Center(
                     child: OutlinedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const AgendaScreen(),
+                          ),
+                        );
+                      },
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: kGold),
                         backgroundColor: Colors.white,
@@ -239,6 +254,15 @@ class _HomeScreenState extends State<HomeScreen> {
             selectedIndex: _currentIndex,
             onDestinationSelected: (i) {
               setState(() => _currentIndex = i);
+
+              if( i == 1) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => const AgendaScreen(),
+                  ),
+                );
+                return;
+              }
 
               if (i == 3) {
                 Navigator.of(context).push(
