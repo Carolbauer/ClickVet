@@ -30,7 +30,6 @@ class _AgendaScreenState extends State<AgendaScreen> {
         .orderBy('date')
         .snapshots();
   }
-
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
@@ -268,6 +267,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
             ),
             const SizedBox(height: 8),
 
+            // ✅ LISTA VINDO DO FIRESTORE, mantendo teus cards/botões
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: _appointmentsStream(vet.uid),

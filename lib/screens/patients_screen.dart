@@ -1,4 +1,6 @@
+import 'package:app/screens/agenda_screen.dart';
 import 'package:app/screens/home_screen.dart';
+import 'package:app/screens/new_schedule_screen.dart';
 import 'package:app/screens/register_pet_screen.dart';
 import 'package:app/screens/register_tutor_screen.dart';
 import 'package:app/theme/clickvet_colors.dart';
@@ -367,11 +369,9 @@ class _PatientsScreenState extends State<PatientsScreen> {
               label: 'Agenda',
               selected: false,
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Tela de Agenda em desenvolvimento.'),
-                  ),
-                );
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const AgendaScreen()),
+                  );
               },
             ),
             GestureDetector(
@@ -683,7 +683,13 @@ class _PatientCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      // TODO: abrir fluxo de agendar
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                          const NewScheduleScreen(),
+                        ),
+                      );
                     },
                     icon: const Icon(
                       Icons.calendar_today_outlined,
@@ -734,24 +740,46 @@ class _PatientCard extends StatelessWidget {
                 SizedBox(
                   width: 42,
                   child: OutlinedButton(
-                    onPressed: () {
-                      // TODO: acionar ligação
-                    },
-                    style: OutlinedButton.styleFrom(
-                      side:
-                      const BorderSide(color: ClickVetColors.gold),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.all(8),
+                  onPressed: () {
+                    // TODO: acionar ligação
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side:
+                    const BorderSide(color: ClickVetColors.gold),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
-                      Icons.phone,
-                      size: 18,
-                      color: ClickVetColors.goldDark,
-                    ),
+                    padding: const EdgeInsets.all(8),
+                  ),
+                  child: const Icon(
+                    Icons.phone,
+                    size: 18,
+                    color: ClickVetColors.goldDark,
                   ),
                 ),
+                ),
+                const SizedBox(width: 6),
+                SizedBox(
+                  width: 42,
+                  child: OutlinedButton(
+                  onPressed: () {
+                  // TODO: acionar EDITAR
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side:
+                    const BorderSide(color: ClickVetColors.gold),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.all(8),
+                  ),
+                  child: const Icon(
+                    Icons.edit,
+                    size: 18,
+                    color: ClickVetColors.goldDark,
+                  ),
+                ),
+    ),
               ],
             ),
           ],
