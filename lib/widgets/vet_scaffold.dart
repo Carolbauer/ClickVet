@@ -1,4 +1,7 @@
+import 'package:app/screens/agenda_screen.dart';
+import 'package:app/screens/new_schedule_screen.dart';
 import 'package:app/screens/patients_screen.dart';
+import 'package:app/screens/tutors_list_screen.dart';
 import 'package:app/widgets/app_drawer.dart';
 import 'package:app/screens/login_screen.dart';
 import 'package:app/services/firebase_user_service.dart';
@@ -97,7 +100,25 @@ class _VetScaffoldState extends State<VetScaffold> {
               Navigator.pop(context);
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const PatientsScreen(),
+                  builder: (_) => const TutorListScreen(),
+                ),
+              );
+            },
+
+            onAgenda: (){
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const AgendaScreen(),
+                ),
+              );
+            },
+
+            onNewSChedule: (){
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const NewScheduleScreen(),
                 ),
               );
             },

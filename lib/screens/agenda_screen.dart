@@ -1,7 +1,9 @@
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:app/theme/clickvet_colors.dart';
 import 'package:app/widgets/vet_scaffold.dart';
-
 import '../widgets/app_drawer.dart';
 
 class AgendaScreen extends StatefulWidget {
@@ -12,71 +14,25 @@ class AgendaScreen extends StatefulWidget {
 }
 
 class _AgendaScreenState extends State<AgendaScreen> {
-  DateTime _selectedDate = DateTime(2025, 11, 20);
-
-  /// Mock inicial de consultas
-  final List<_Appointment> _appointments = [
-    _Appointment(
-      id: '1',
-      date: DateTime(2025, 11, 20),
-      time: '08:00',
-      petName: 'Rex',
-      breed: 'Labrador',
-      owner: 'Pedro S.',
-      ownerPhone: '(11) 98765-4321',
-      status: AppointmentStatus.confirmed,
-      type: 'Consulta de Rotina',
-    ),
-    _Appointment(
-      id: '2',
-      date: DateTime(2025, 11, 20),
-      time: '09:30',
-      petName: 'Maia',
-      breed: 'Siamês',
-      owner: 'Roberto R.',
-      ownerPhone: '(11) 91234-5678',
-      status: AppointmentStatus.pending,
-      type: 'Vacinação',
-    ),
-    _Appointment(
-      id: '3',
-      date: DateTime(2025, 11, 20),
-      time: '11:00',
-      petName: 'Fred',
-      breed: 'Pastor Alemão',
-      owner: 'Roberto R.',
-      ownerPhone: '(11) 91234-5678',
-      status: AppointmentStatus.confirmed,
-      type: 'Emergência',
-    ),
-    _Appointment(
-      id: '4',
-      date: DateTime(2025, 11, 20),
-      time: '14:30',
-      petName: 'Luna',
-      breed: 'Golden Retriever',
-      owner: 'Ana Silva',
-      ownerPhone: '(11) 99876-5432',
-      status: AppointmentStatus.confirmed,
-      type: 'Exame',
-    ),
-    _Appointment(
-      id: '5',
-      date: DateTime(2025, 11, 20),
-      time: '16:00',
-      petName: 'Thor',
-      breed: 'Bulldog',
-      owner: 'Carla Santos',
-      ownerPhone: '(11) 98888-7777',
-      status: AppointmentStatus.pending,
-      type: 'Cirurgia',
-    ),
-  ];
+  DateTime _selectedDate = DateTime.now();
 
   void _changeDate(int deltaDays) {
     setState(() {
       _selectedDate = _selectedDate.add(Duration(days: deltaDays));
     });
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> _appointmentsStream(String vetUid) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(vetUid)
+        .collection('appointments')
+        .orderBy('date')
+        .snapshots();
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   String _formatSelectedDate(DateTime d) {
@@ -134,9 +90,22 @@ class _AgendaScreenState extends State<AgendaScreen> {
     );
 
     if (confirmed == true) {
-      setState(() {
-        appointment.status = AppointmentStatus.confirmed;
-      });
+      final vet = FirebaseAuth.instance.currentUser;
+      if (vet == null) return;
+
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(vet.uid)
+            .collection('appointments')
+            .doc(appointment.id)
+            .update({'status': 'Confirmado'});
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao confirmar: $e')),
+        );
+      }
     }
   }
 
@@ -163,9 +132,22 @@ class _AgendaScreenState extends State<AgendaScreen> {
     );
 
     if (confirmed == true) {
-      setState(() {
-        _appointments.removeWhere((a) => a.id == appointment.id);
-      });
+      final vet = FirebaseAuth.instance.currentUser;
+      if (vet == null) return;
+
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(vet.uid)
+            .collection('appointments')
+            .doc(appointment.id)
+            .delete();
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao excluir: $e')),
+        );
+      }
     }
   }
 
@@ -179,24 +161,42 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
   void _contactOwner(_Appointment appointment) {
     // Depois usar url_launcher para abrir WhatsApp.
+    final phone = appointment.ownerPhone.isEmpty
+        ? 'Telefone não cadastrado'
+        : appointment.ownerPhone;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Contato do tutor: ${appointment.ownerPhone}'),
+        content: Text('Contato do tutor: $phone'),
       ),
     );
   }
 
+  AppointmentStatus _parseStatus(String? s) {
+    switch (s) {
+      case 'Confirmado':
+        return AppointmentStatus.confirmed;
+      case 'Em Atendimento':
+        return AppointmentStatus.inProgress;
+      case 'Concluído':
+        return AppointmentStatus.done;
+      default:
+        return AppointmentStatus.pending;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final sameDayAppointments = _appointments.where((a) {
-      return a.date.year == _selectedDate.year &&
-          a.date.month == _selectedDate.month &&
-          a.date.day == _selectedDate.day;
-    }).toList()
-      ..sort((a, b) => a.time.compareTo(b.time));
+    final vet = FirebaseAuth.instance.currentUser;
+    if (vet == null) {
+      return const Scaffold(
+        backgroundColor: ClickVetColors.bg,
+        body: Center(child: Text('Sessão expirada.')),
+      );
+    }
 
     return VetScaffold(
-      selectedKey: DrawerItemKey.home,
+      selectedKey: DrawerItemKey.agenda,
       appBar: AppBar(
         backgroundColor: ClickVetColors.bg,
         elevation: 0,
@@ -234,8 +234,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   color: ClickVetColors.bg,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 child: Row(
                   children: [
                     IconButton(
@@ -267,26 +266,63 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 8),
 
             Expanded(
-              child: sameDayAppointments.isEmpty
-                  ? const _EmptyAgenda()
-                  : ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                itemCount: sameDayAppointments.length,
-                itemBuilder: (context, index) {
-                  final a = sameDayAppointments[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: _AppointmentCard(
-                      appointment: a,
-                      onConfirm: _confirmAppointment,
-                      onDelete: _deleteAppointment,
-                      onEdit: _editAppointment,
-                      onContact: _contactOwner,
-                    ),
+              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: _appointmentsStream(vet.uid),
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final docs = snap.data?.docs ?? [];
+
+                  final sameDayAppointments = docs
+                      .map((d) {
+                    final m = d.data();
+                    final ts = m['date'];
+
+                    if (ts == null || ts is! Timestamp) return null;
+                    final dt = ts.toDate();
+
+                    return _Appointment(
+                      id: d.id,
+                      date: dt,
+                      time: (m['time'] ?? '--:--').toString(),
+                      petName: (m['petName'] ?? '—').toString(),
+                      breed: (m['petBreed'] ?? '—').toString(),
+                      owner: (m['tutorName'] ?? '—').toString(),
+                      ownerPhone: (m['tutorPhone'] ?? m['ownerPhone'] ?? '').toString(),
+                      status: _parseStatus(m['status']?.toString()),
+                      type: (m['tipoConsulta'] ?? '—').toString(),
+                    );
+                  })
+                      .whereType<_Appointment>()
+                      .where((a) => _isSameDay(a.date, _selectedDate))
+                      .toList()
+                    ..sort((a, b) => a.date.compareTo(b.date));
+
+                  if (sameDayAppointments.isEmpty) {
+                    return const _EmptyAgenda();
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    itemCount: sameDayAppointments.length,
+                    itemBuilder: (context, index) {
+                      final a = sameDayAppointments[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: _AppointmentCard(
+                          appointment: a,
+                          onConfirm: _confirmAppointment,
+                          onDelete: _deleteAppointment,
+                          onEdit: _editAppointment,
+                          onContact: _contactOwner,
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -297,7 +333,6 @@ class _AgendaScreenState extends State<AgendaScreen> {
     );
   }
 }
-
 
 enum AppointmentStatus { confirmed, pending, inProgress, done }
 

@@ -1,6 +1,6 @@
 import 'package:app/screens/agenda_screen.dart';
+import 'package:app/screens/new_schedule_screen.dart';
 import 'package:app/screens/patients_screen.dart';
-import 'package:app/screens/register_tutor_screen.dart';
 import 'package:app/screens/tutors_list_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,9 +10,9 @@ import 'package:app/widgets/app_drawer.dart';
 import '../services/firebase_user_service.dart';
 import 'package:app/screens/register_pet_screen.dart';
 
-const kBg      = Color(0xFFF5F2ED);
-const kGold    = Color(0xFFB8860B);
-const kGoldLt  = Color(0xFFD4AF37);
+const kBg        = Color(0xFFF5F2ED);
+const kGold      = Color(0xFFB8860B);
+const kGoldLt    = Color(0xFFD4AF37);
 const kGoldDark  = Color(0xFF8B6914);
 
 class HomeScreen extends StatefulWidget {
@@ -24,33 +24,16 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final userService = UserService();
-
   int _currentIndex = 0;
 
-  // MOCK de agenda
-  final List<Map<String, dynamic>> _appointments = const [
-    {
-      'time': '08:00',
-      'pet': 'Rex (Labrador)',
-      'tutor': 'Pedro S.',
-      'status': 'Confirmado',
-      'statusColor': Colors.green,
-    },
-    {
-      'time': '09:30',
-      'pet': 'Maia (Siamês)',
-      'tutor': 'Roberto R.',
-      'status': 'Cancelado',
-      'statusColor': Colors.red,
-    },
-    {
-      'time': '11:00',
-      'pet': 'Fred (Pastor Alemão)',
-      'tutor': 'Roberto R.',
-      'status': 'Confirmado',
-      'statusColor': Colors.green,
-    },
-  ];
+  Stream<QuerySnapshot<Map<String, dynamic>>> _appointmentsStream(String vetUid) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(vetUid)
+        .collection('appointments')
+        .orderBy('date')
+        .snapshots();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,28 +118,23 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             onPetRegister: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const RegisterPetScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const RegisterPetScreen()),
               );
             },
-            onPatients: (){
+            onPatients: () {
               Navigator.pop(context);
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const PatientsScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const PatientsScreen()),
               );
             },
             onAgenda: () {
               Navigator.pop(context);
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const AgendaScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const AgendaScreen()),
               );
             },
           ),
+
           body: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -209,16 +187,55 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  _AgendaCard(appointments: _appointments),
+                  StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream: _appointmentsStream(user.uid),
+                    builder: (context, apSnap) {
+                      if (apSnap.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+                      if (apSnap.hasError) {
+                        return Text('Erro ao carregar agenda: ${apSnap.error}');
+                      }
+
+                      final docs = apSnap.data?.docs ?? [];
+
+                      final now = DateTime.now();
+                      final todayList = docs.where((d) {
+                        final m = d.data();
+                        final ts = m['date'];
+                        if (ts is! Timestamp) return false;
+                        final dt = ts.toDate();
+                        return dt.year == now.year &&
+                            dt.month == now.month &&
+                            dt.day == now.day;
+                      }).toList();
+
+                      if (todayList.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text(
+                            'Nenhuma consulta agendada para hoje.',
+                            style: TextStyle(color: Colors.black54),
+                          ),
+                        );
+                      }
+
+                      return _AgendaCardFromFirestore(appointments: todayList);
+                    },
+                  ),
+
                   const SizedBox(height: 20),
 
                   Center(
                     child: OutlinedButton(
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const AgendaScreen(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const AgendaScreen()),
                         );
                       },
                       style: OutlinedButton.styleFrom(
@@ -255,20 +272,23 @@ class _HomeScreenState extends State<HomeScreen> {
             onDestinationSelected: (i) {
               setState(() => _currentIndex = i);
 
-              if( i == 1) {
+              if (i == 1) {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const AgendaScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const AgendaScreen()),
+                );
+                return;
+              }
+
+              if (i == 2) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const NewScheduleScreen()),
                 );
                 return;
               }
 
               if (i == 3) {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const PatientsScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const PatientsScreen()),
                 );
               }
             },
@@ -327,9 +347,22 @@ class _SearchField extends StatelessWidget {
   }
 }
 
-class _AgendaCard extends StatelessWidget {
-  const _AgendaCard({required this.appointments});
-  final List<Map<String, dynamic>> appointments;
+class _AgendaCardFromFirestore extends StatelessWidget {
+  const _AgendaCardFromFirestore({required this.appointments});
+  final List<QueryDocumentSnapshot<Map<String, dynamic>>> appointments;
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'Confirmado':
+        return Colors.green;
+      case 'Pendente':
+        return Colors.orange;
+      case 'Concluído':
+        return Colors.blueGrey;
+      default:
+        return Colors.grey;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -346,7 +379,19 @@ class _AgendaCard extends StatelessWidget {
         separatorBuilder: (_, __) =>
             Divider(height: 1, color: Colors.black12.withOpacity(0.2)),
         itemBuilder: (_, index) {
-          final a = appointments[index];
+          final m = appointments[index].data();
+
+          final ts = m['date'] as Timestamp;
+          final dt = ts.toDate();
+
+          final time =
+              '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+
+          final petName = (m['petName'] ?? '—').toString();
+          final petBreed = (m['petBreed'] ?? '').toString();
+          final tutorName = (m['tutorName'] ?? '—').toString();
+          final status = (m['status'] ?? 'Pendente').toString();
+
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
@@ -354,33 +399,26 @@ class _AgendaCard extends StatelessWidget {
               children: [
                 const Icon(Icons.event, color: kGold, size: 24),
                 const SizedBox(width: 12),
+
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      RichText(
-                        text: TextSpan(
-                          style: const TextStyle(
-                              color: Colors.black87, fontSize: 14),
-                          children: [
-                            TextSpan(
-                              text: '${a['time']} - ',
-                              style:
-                              const TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                            TextSpan(
-                              text: a['pet'] as String,
-                              style:
-                              const TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                          ],
+                      Text(
+                        '$time - $petName ${petBreed.isNotEmpty ? "($petBreed)" : ""}',
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Tutor: ${a['tutor']}',
+                        'Tutor: $tutorName',
                         style: const TextStyle(
-                            color: Colors.black87, fontSize: 13),
+                          color: Colors.black87,
+                          fontSize: 13,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Container(
@@ -393,11 +431,12 @@ class _AgendaCard extends StatelessWidget {
                     ],
                   ),
                 ),
+
                 const SizedBox(width: 12),
                 Text(
-                  a['status'] as String,
+                  status,
                   style: TextStyle(
-                    color: (a['statusColor'] as Color),
+                    color: _statusColor(status),
                     fontWeight: FontWeight.w700,
                   ),
                 ),

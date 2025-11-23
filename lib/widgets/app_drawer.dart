@@ -8,7 +8,7 @@ enum DrawerItemKey {
   tutors,
   petRegister,
   profile,
-  settings,
+  settings, newSchedule,
 }
 
 class AppDrawer extends StatelessWidget {
@@ -19,7 +19,7 @@ class AppDrawer extends StatelessWidget {
     this.selectedKey,
     this.onHome,
     this.onAgenda,
-    this.onNewAppointment,
+    this.onNewSChedule,
     this.onPatients,
     this.onTutorPatients,
     this.onPetRegister,
@@ -35,7 +35,7 @@ class AppDrawer extends StatelessWidget {
 
   final VoidCallback? onHome;
   final VoidCallback? onAgenda;
-  final VoidCallback? onNewAppointment;
+  final VoidCallback? onNewSChedule;
   final VoidCallback? onPatients;
   final VoidCallback? onTutorPatients;
   final VoidCallback? onPetRegister;
@@ -112,7 +112,7 @@ class AppDrawer extends StatelessWidget {
                   keyItem: DrawerItemKey.newAppointment,
                   icon: Icons.add_circle_outline,
                   label: 'Nova Consulta',
-                  onTap: onNewAppointment,
+                  onTap: onNewSChedule,
                 ),
                 _item(
                   context,
