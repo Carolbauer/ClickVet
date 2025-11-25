@@ -30,6 +30,7 @@ class _RegisterPetScreenState extends State<RegisterPetScreen> {
 
   String? _selectedTutorId;
   String? _selectedTutorName;
+  String? _tutorPhone;
   String? _selectedGender;
 
   final ImagePicker _picker = ImagePicker();
@@ -109,6 +110,11 @@ class _RegisterPetScreenState extends State<RegisterPetScreen> {
         'name': _nameController.text.trim(),
         'tutorId': _selectedTutorId,
         'tutorName': _selectedTutorName,
+
+        'tutorPhone': _tutorPhone,
+        'ownerPhone': _tutorPhone,
+        'phone': _tutorPhone,
+
         'species': _speciesController.text.trim(),
         'breed': _breedController.text.trim(),
         'gender': _selectedGender,
@@ -287,13 +293,23 @@ class _RegisterPetScreenState extends State<RegisterPetScreen> {
                         onChanged: (value) {
                           setState(() {
                             _selectedTutorId = value;
+
                             if (value != null) {
-                              final doc = docs
-                                  .firstWhere((d) => d.id == value);
+                              final doc =
+                              docs.firstWhere((d) => d.id == value);
+                              final tutorData = doc.data();
+
                               _selectedTutorName =
-                                  (doc.data()['name'] ?? '').toString();
+                                  (tutorData['name'] ?? '').toString();
+
+                              _tutorPhone = (tutorData['phone'] ??
+                                  tutorData['telefone'] ??
+                                  tutorData['tutorPhone'] ??
+                                  '')
+                                  .toString();
                             } else {
                               _selectedTutorName = null;
+                              _tutorPhone = null;
                             }
                           });
                         },
@@ -308,8 +324,9 @@ class _RegisterPetScreenState extends State<RegisterPetScreen> {
               TextFormField(
                 controller: _nameController,
                 decoration: _deco('Nome do Pet', icon: Icons.favorite_border),
-                validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Informe o nome do pet' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Informe o nome do pet'
+                    : null,
               ),
               const SizedBox(height: 14),
 
@@ -353,8 +370,7 @@ class _RegisterPetScreenState extends State<RegisterPetScreen> {
 
               TextFormField(
                 controller: _birthDateController,
-                decoration: _deco(
-                    'Data de nascimento (opcional)',
+                decoration: _deco('Data de nascimento (opcional)',
                     icon: Icons.cake_outlined),
               ),
               const SizedBox(height: 14),
