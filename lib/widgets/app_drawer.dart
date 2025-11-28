@@ -23,6 +23,7 @@ class AppDrawer extends StatelessWidget {
     this.onPatients,
     this.onTutorPatients,
     this.onPetRegister,
+    this.onMedicalRecord,
     this.onProfile,
     this.onSettings,
     this.onLogout,
@@ -39,6 +40,7 @@ class AppDrawer extends StatelessWidget {
   final VoidCallback? onPatients;
   final VoidCallback? onTutorPatients;
   final VoidCallback? onPetRegister;
+  final VoidCallback? onMedicalRecord;
   final VoidCallback? onProfile;
   final VoidCallback? onSettings;
   final VoidCallback? onLogout;
@@ -134,6 +136,13 @@ class AppDrawer extends StatelessWidget {
                   icon: Icons.person_2_rounded,
                   label: 'Tutores',
                   onTap: onTutorPatients,
+                ),
+                _item(
+                  context,
+                  keyItem: DrawerItemKey.tutors,
+                  icon: Icons.book_online_outlined,
+                  label: 'Prontuário',
+                  onTap: onMedicalRecord,
                 ),
                 if (onProfile != null)
                   _item(

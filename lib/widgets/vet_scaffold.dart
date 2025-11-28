@@ -1,4 +1,5 @@
 import 'package:app/screens/agenda_screen.dart';
+import 'package:app/screens/medical_record_screen.dart';
 import 'package:app/screens/new_schedule_screen.dart';
 import 'package:app/screens/patients_screen.dart';
 import 'package:app/screens/tutors_list_screen.dart';
@@ -135,6 +136,14 @@ class _VetScaffoldState extends State<VetScaffold> {
             onPatients: (){
               Navigator.pop(context);
               Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const PatientsScreen(),
+                ),
+              );
+            },
+
+            onMedicalRecord: (){
+              Navigator.of(context).pushReplacement(
                 MaterialPageRoute(
                   builder: (_) => const PatientsScreen(),
                 ),

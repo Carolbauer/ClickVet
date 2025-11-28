@@ -1,6 +1,7 @@
 import 'package:app/screens/agenda_screen.dart';
 import 'package:app/screens/edit_pet_screen.dart';
 import 'package:app/screens/home_screen.dart';
+import 'package:app/screens/medical_record_screen.dart';
 import 'package:app/screens/new_schedule_screen.dart';
 import 'package:app/screens/register_pet_screen.dart';
 import 'package:app/screens/register_tutor_screen.dart';
@@ -736,7 +737,11 @@ class _PatientCard extends StatelessWidget {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () {
-                          // TODO: abrir prontuário
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>  MedicalRecordScreen(petId: patient.id),
+                            ),
+                          );
                         },
                         style: OutlinedButton.styleFrom(
                           side:
