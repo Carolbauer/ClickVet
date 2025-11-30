@@ -27,17 +27,14 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isSaving = false;
 
-  // Data e hora
   final _dateController = TextEditingController();
   final _timeController = TextEditingController();
 
-  // Sinais vitais
   final _weightController = TextEditingController();
   final _temperatureController = TextEditingController();
   final _heartRateController = TextEditingController();
   final _respRateController = TextEditingController();
 
-  // Campos de texto longo
   final _chiefComplaintController = TextEditingController();
   final _anamnesisController = TextEditingController();
   final _physicalExamController = TextEditingController();
@@ -45,8 +42,11 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
   final _prescriptionController = TextEditingController();
   final _notesController = TextEditingController();
 
-  // Retorno
   final _returnDateController = TextEditingController();
+
+  String _vaccinesSummary = '';
+  String _examsSummary = '';
+  String _surgeriesSummary = '';
 
   @override
   void dispose() {
@@ -66,23 +66,34 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
     super.dispose();
   }
 
-  InputDecoration _fieldDeco(String label, {IconData? icon, String? hint}) {
+  InputDecoration _fieldDeco(
+      String label, {
+        IconData? icon,
+        String? hint,
+      }) {
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      prefixIcon: icon != null ? Icon(icon, color: ClickVetColors.goldDark) : null,
+      prefixIcon: icon != null
+          ? Icon(icon, color: ClickVetColors.goldDark)
+          : null,
       filled: true,
       fillColor: Colors.white,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: ClickVetColors.gold, width: 1.4),
+        borderSide:
+        const BorderSide(color: ClickVetColors.gold, width: 1.4),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: ClickVetColors.goldDark, width: 2),
+        borderSide: const BorderSide(
+          color: ClickVetColors.goldDark,
+          width: 2,
+        ),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      contentPadding:
+      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     );
   }
 
@@ -96,11 +107,15 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: ClickVetColors.gold, width: 1.4),
+        borderSide:
+        const BorderSide(color: ClickVetColors.gold, width: 1.4),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: ClickVetColors.goldDark, width: 2),
+        borderSide: const BorderSide(
+          color: ClickVetColors.goldDark,
+          width: 2,
+        ),
       ),
       contentPadding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
     );
@@ -138,13 +153,57 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
     );
   }
 
+  Future<void> _editSimpleSummary({
+    required String title,
+    required String initialValue,
+    required ValueChanged<String> onSaved,
+  }) async {
+    final controller = TextEditingController(text: initialValue);
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: controller,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              hintText: 'Digite aqui...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(
+                controller.text.trim(),
+              ),
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null) {
+      onSaved(result);
+      setState(() {});
+    }
+  }
+
   Future<void> _saveEvolution() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final vet = FirebaseAuth.instance.currentUser;
     if (vet == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sessão expirada. Faça login novamente.')),
+        const SnackBar(
+          content: Text('Sessão expirada. Faça login novamente.'),
+        ),
       );
       return;
     }
@@ -173,18 +232,26 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
         'prescription': _prescriptionController.text.trim(),
         'notes': _notesController.text.trim(),
         'returnDate': _returnDateController.text.trim(),
+        'vaccinesSummary': _vaccinesSummary.trim(),
+        'examsSummary': _examsSummary.trim(),
+        'surgeriesSummary': _surgeriesSummary.trim(),
+
         'createdAt': FieldValue.serverTimestamp(),
       });
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Evolução salva com sucesso!')),
+        const SnackBar(
+          content: Text('Evolução salva com sucesso!'),
+        ),
       );
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao salvar evolução: $e')),
+        SnackBar(
+          content: Text('Erro ao salvar evolução: $e'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -208,7 +275,8 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
         centerTitle: true,
         leading: Builder(
           builder: (ctx) => IconButton(
-            icon: const Icon(Icons.menu, color: ClickVetColors.goldDark),
+            icon:
+            const Icon(Icons.menu, color: ClickVetColors.goldDark),
             onPressed: () => Scaffold.of(ctx).openDrawer(),
           ),
         ),
@@ -226,7 +294,6 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
         color: ClickVetColors.bg,
         child: Column(
           children: [
-            // cabeçalho do paciente
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
@@ -275,7 +342,6 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
                   key: _formKey,
                   child: Column(
                     children: [
-                      // DATA E HORA
                       _SectionCard(
                         icon: Icons.calendar_today_outlined,
                         title: 'Data e Hora',
@@ -288,7 +354,9 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
                                 decoration: _fieldDeco('Data'),
                                 onTap: () => _pickDate(_dateController),
                                 validator: (v) =>
-                                (v == null || v.isEmpty) ? 'Informe a data' : null,
+                                (v == null || v.isEmpty)
+                                    ? 'Informe a data'
+                                    : null,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -299,15 +367,15 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
                                 decoration: _fieldDeco('Horário'),
                                 onTap: () => _pickTime(_timeController),
                                 validator: (v) =>
-                                (v == null || v.isEmpty) ? 'Informe o horário' : null,
+                                (v == null || v.isEmpty)
+                                    ? 'Informe o horário'
+                                    : null,
                               ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 12),
-
-                      // SINAIS VITAIS
                       _SectionCard(
                         icon: Icons.monitor_heart_outlined,
                         title: 'Sinais Vitais',
@@ -319,9 +387,13 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
                                   child: TextFormField(
                                     controller: _weightController,
                                     keyboardType:
-                                    const TextInputType.numberWithOptions(
+                                    const TextInputType
+                                        .numberWithOptions(
                                         decimal: true),
-                                    decoration: _fieldDeco('Peso (kg)', icon: Icons.pets),
+                                    decoration: _fieldDeco(
+                                      'Peso (kg)',
+                                      icon: Icons.pets,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -329,11 +401,13 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
                                   child: TextFormField(
                                     controller: _temperatureController,
                                     keyboardType:
-                                    const TextInputType.numberWithOptions(
+                                    const TextInputType
+                                        .numberWithOptions(
                                         decimal: true),
                                     decoration: _fieldDeco(
                                       'Temperatura (°C)',
-                                      icon: Icons.thermostat_outlined,
+                                      icon:
+                                      Icons.thermostat_outlined,
                                     ),
                                   ),
                                 ),
@@ -346,8 +420,9 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
                                   child: TextFormField(
                                     controller: _heartRateController,
                                     keyboardType: TextInputType.number,
-                                    decoration:
-                                    _fieldDeco('Freq. Cardíaca (bpm)'),
+                                    decoration: _fieldDeco(
+                                      'Freq. Cardíaca (bpm)',
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -356,7 +431,8 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
                                     controller: _respRateController,
                                     keyboardType: TextInputType.number,
                                     decoration: _fieldDeco(
-                                        'Freq. Respiratória (rpm)'),
+                                      'Freq. Respiratória (rpm)',
+                                    ),
                                   ),
                                 ),
                               ],
@@ -430,7 +506,8 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
                           maxLines: 3,
                           decoration: _areaDeco(
                             'Prescrição e Tratamento',
-                            hint: 'Medicamentos, dosagens e instruções...',
+                            hint:
+                            'Medicamentos, dosagens e instruções...',
                           ),
                         ),
                       ),
@@ -456,40 +533,58 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
                         child: TextFormField(
                           controller: _returnDateController,
                           readOnly: true,
-                          decoration:
-                          _fieldDeco('Data do retorno (opcional)'),
+                          decoration: _fieldDeco(
+                            'Data do retorno (opcional)',
+                          ),
                           onTap: () => _pickDate(_returnDateController),
                         ),
                       ),
                       const SizedBox(height: 12),
-
-                      // BOTÕES P/ VACINAS / MEDICAMENTOS / EXAMES – ainda só placeholders
                       _SectionCard(
                         icon: Icons.vaccines_outlined,
                         title: 'Vacinas Aplicadas',
-                        child: SizedBox(
-                          height: 44,
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: ClickVetColors.gold),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              height: 44,
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(
+                                      color: ClickVetColors.gold),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                onPressed: () => _editSimpleSummary(
+                                  title: 'Vacinas aplicadas',
+                                  initialValue: _vaccinesSummary,
+                                  onSaved: (value) =>
+                                  _vaccinesSummary = value,
+                                ),
+                                child: const Text(
+                                  '+  Adicionar Vacina',
+                                  style: TextStyle(
+                                    color: ClickVetColors.goldDark,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                             ),
-                            onPressed: () =>
-                                _showSoon('Em breve: adicionar vacina'),
-                            child: const Text(
-                              '+  Adicionar Vacina',
-                              style: TextStyle(
-                                color: ClickVetColors.goldDark,
-                                fontWeight: FontWeight.w600,
+                            if (_vaccinesSummary.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                _vaccinesSummary,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black87,
+                                ),
                               ),
-                            ),
-                          ),
+                            ],
+                          ],
                         ),
                       ),
                       const SizedBox(height: 12),
-
                       _SectionCard(
                         icon: Icons.medication_liquid_outlined,
                         title: 'Medicamentos Prescritos',
@@ -497,13 +592,14 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
                           height: 44,
                           child: OutlinedButton(
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: ClickVetColors.gold),
+                              side: const BorderSide(
+                                  color: ClickVetColors.gold),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            onPressed: () =>
-                                _showSoon('Em breve: adicionar medicamento'),
+                            onPressed: () => _showSoon(
+                                'Em breve: adicionar medicamento'),
                             child: const Text(
                               '+  Adicionar Medicamento',
                               style: TextStyle(
@@ -515,33 +611,97 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-
                       _SectionCard(
                         icon: Icons.science_outlined,
                         title: 'Exames Solicitados',
-                        child: SizedBox(
-                          height: 44,
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: ClickVetColors.gold),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              height: 44,
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(
+                                      color: ClickVetColors.gold),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                onPressed: () => _editSimpleSummary(
+                                  title: 'Exames solicitados',
+                                  initialValue: _examsSummary,
+                                  onSaved: (value) =>
+                                  _examsSummary = value,
+                                ),
+                                child: const Text(
+                                  '+  Adicionar Exame',
+                                  style: TextStyle(
+                                    color: ClickVetColors.goldDark,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                             ),
-                            onPressed: () =>
-                                _showSoon('Em breve: adicionar exame'),
-                            child: const Text(
-                              '+  Adicionar Exame',
-                              style: TextStyle(
-                                color: ClickVetColors.goldDark,
-                                fontWeight: FontWeight.w600,
+                            if (_examsSummary.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                _examsSummary,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      _SectionCard(
+                        icon: Icons.monitor_heart_outlined,
+                        title: 'Cirurgias Realizadas',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              height: 44,
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(
+                                      color: ClickVetColors.gold),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                onPressed: () => _editSimpleSummary(
+                                  title: 'Cirurgias realizadas',
+                                  initialValue: _surgeriesSummary,
+                                  onSaved: (value) =>
+                                  _surgeriesSummary = value,
+                                ),
+                                child: const Text(
+                                  '+  Adicionar Cirurgia',
+                                  style: TextStyle(
+                                    color: ClickVetColors.goldDark,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                            if (_surgeriesSummary.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                _surgeriesSummary,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                       const SizedBox(height: 20),
-
                       Row(
                         children: [
                           Expanded(
@@ -557,8 +717,9 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
-                                padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                               ),
                               child: const Text(
                                 'Cancelar',
@@ -591,7 +752,8 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
                                 ],
                               ),
                               child: ElevatedButton(
-                                onPressed: _isSaving ? null : _saveEvolution,
+                                onPressed:
+                                _isSaving ? null : _saveEvolution,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.transparent,
                                   shadowColor: Colors.transparent,
@@ -599,10 +761,13 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   padding: const EdgeInsets.symmetric(
-                                      vertical: 14),
+                                    vertical: 14,
+                                  ),
                                 ),
                                 child: Text(
-                                  _isSaving ? 'Salvando...' : 'Salvar Evolução',
+                                  _isSaving
+                                      ? 'Salvando...'
+                                      : 'Salvar Evolução',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -643,14 +808,21 @@ class _SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: ClickVetColors.gold, width: 1.6),
+        border: Border.all(
+          color: ClickVetColors.gold,
+          width: 1.6,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: ClickVetColors.goldDark),
+              Icon(
+                icon,
+                size: 18,
+                color: ClickVetColors.goldDark,
+              ),
               const SizedBox(width: 6),
               Text(
                 title,

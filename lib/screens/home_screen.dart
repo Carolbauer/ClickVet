@@ -133,7 +133,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(builder: (_) => const AgendaScreen()),
               );
             },
+            onFinancialDashboard: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AgendaScreen()),
+              );
+            },
           ),
+
 
           body: SafeArea(
             child: SingleChildScrollView(
@@ -306,7 +313,7 @@ class _HomeScreenState extends State<HomeScreen> {
               NavigationDestination(
                 icon: Icon(Icons.add_circle_outline),
                 selectedIcon: Icon(Icons.add_circle),
-                label: 'Nova Consulta',
+                label: 'Agendar',
               ),
               NavigationDestination(
                 icon: Icon(Icons.pets_outlined),

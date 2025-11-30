@@ -8,7 +8,7 @@ enum DrawerItemKey {
   tutors,
   petRegister,
   profile,
-  settings, newSchedule,
+  settings, newSchedule, financial,
 }
 
 class AppDrawer extends StatelessWidget {
@@ -27,6 +27,7 @@ class AppDrawer extends StatelessWidget {
     this.onProfile,
     this.onSettings,
     this.onLogout,
+    this.onFinancialDashboard,
   });
 
   final String userName;
@@ -44,6 +45,7 @@ class AppDrawer extends StatelessWidget {
   final VoidCallback? onProfile;
   final VoidCallback? onSettings;
   final VoidCallback? onLogout;
+  final VoidCallback? onFinancialDashboard;
 
   // ClickVet cores
   static const kCvPrimary   = Color(0xFFB8860B); // dourado médio
@@ -113,7 +115,7 @@ class AppDrawer extends StatelessWidget {
                   context,
                   keyItem: DrawerItemKey.newAppointment,
                   icon: Icons.add_circle_outline,
-                  label: 'Nova Consulta',
+                  label: 'Novo Agendamento',
                   onTap: onNewSChedule,
                 ),
                 _item(
@@ -143,6 +145,13 @@ class AppDrawer extends StatelessWidget {
                   icon: Icons.book_online_outlined,
                   label: 'Prontuário',
                   onTap: onMedicalRecord,
+                ),
+                _item(
+                  context,
+                  keyItem: DrawerItemKey.tutors,
+                  icon: Icons.book_online_outlined,
+                  label: 'Financeiro',
+                  onTap: onFinancialDashboard,
                 ),
                 if (onProfile != null)
                   _item(

@@ -55,6 +55,15 @@ class MedicalRecordScreen extends StatelessWidget {
         .doc(petId)
         .snapshots();
 
+    final evolutionsStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(vet.uid)
+        .collection('pets')
+        .doc(petId)
+        .collection('evolutions')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+
     return VetScaffold(
       selectedKey: DrawerItemKey.patients,
       appBar: AppBar(
@@ -92,12 +101,10 @@ class MedicalRecordScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
                 child: Column(
                   children: [
-                    StreamBuilder<
-                        DocumentSnapshot<Map<String, dynamic>>>(
+                    StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                       stream: petDocStream,
                       builder: (context, snap) {
-                        if (snap.connectionState ==
-                            ConnectionState.waiting) {
+                        if (snap.connectionState == ConnectionState.waiting) {
                           return const Padding(
                             padding: EdgeInsets.only(bottom: 16),
                             child: Center(
@@ -126,18 +133,16 @@ class MedicalRecordScreen extends StatelessWidget {
                         final gender = (m['gender'] ?? '').toString();
                         final color = (m['color'] ?? '').toString();
                         final weightValue = m['weight'];
-                        final weight = weightValue == null
-                            ? '—'
-                            : '$weightValue kg';
-                        final tutorName =
-                        (m['tutorName'] ?? '—').toString();
-                        final age =
-                        _ageFrom(m['birthDate'] ?? m['age']);
+                        final weight =
+                        weightValue == null ? '—' : '$weightValue kg';
+                        final tutorName = (m['tutorName'] ?? '—').toString();
+                        final age = _ageFrom(m['birthDate'] ?? m['age']);
 
                         patient.id = petId;
                         patient.name = name;
                         patient.breed = breed;
                         patient.ownerName = tutorName;
+
                         return _PetHeaderCard(
                           name: name,
                           breed: breed,
@@ -160,8 +165,7 @@ class MedicalRecordScreen extends StatelessWidget {
                       subtitle: 'Nenhuma alergia registrada ainda',
                       children: [
                         const _EmptyText(
-                          text:
-                          'Nenhuma alergia cadastrada para este pet.',
+                          text: 'Nenhuma alergia cadastrada para este pet.',
                         ),
                         const SizedBox(height: 8),
                         _PrimarySectionButton(
@@ -182,224 +186,448 @@ class MedicalRecordScreen extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
-                    _SectionCard(
-                      icon: Icons.history_rounded,
-                      iconBg: const Color(0xFFE0EAFF),
-                      iconColor: const Color(0xFF2563EB),
-                      title: 'Histórico de Consultas',
-                      subtitle: 'Nenhuma consulta registrada ainda',
-                      children: const [
-                        _EmptyText(
-                          text:
-                          'Nenhuma consulta registrada para este pet.',
-                        ),
-                        SizedBox(height: 8),
-                        // lista de consultas
-                      ],
-                    ),
+                    StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: evolutionsStream,
+                      builder: (context, snap) {
+                        if (snap.connectionState == ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        }
 
-                    const SizedBox(height: 12),
+                        if (snap.hasError) {
+                          return _ErrorCard(
+                            message:
+                            'Erro ao carregar evoluções: ${snap.error}',
+                          );
+                        }
 
-                    _SectionCard(
-                      icon: Icons.vaccines_outlined,
-                      iconBg: const Color(0xFFDCFCE7),
-                      iconColor: const Color(0xFF16A34A),
-                      title: 'Vacinas',
-                      subtitle: 'Nenhuma vacina registrada',
-                      children: [
-                        const _EmptyText(
-                          text:
-                          'Nenhuma vacina registrada para este pet.',
-                        ),
-                        const SizedBox(height: 8),
-                        _PrimarySectionButton(
-                          label: 'Adicionar vacina',
-                          color: const Color(0xFF16A34A),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Fluxo de adicionar vacina em desenvolvimento.',
+                        final docs = snap.data?.docs ?? [];
+                        final evolutions =
+                        docs.map((d) => d.data()).toList();
+
+                        final evolWithVaccines = evolutions.where((e) {
+                          final s =
+                          ((e['vaccinesSummary'] ?? '') as String).trim();
+                          return s.isNotEmpty;
+                        }).toList();
+
+                        final evolWithExams = evolutions.where((e) {
+                          final s =
+                          ((e['examsSummary'] ?? '') as String).trim();
+                          return s.isNotEmpty;
+                        }).toList();
+
+                        final evolWithMeds = evolutions.where((e) {
+                          final s =
+                          ((e['prescription'] ?? '') as String).trim();
+                          return s.isNotEmpty;
+                        }).toList();
+
+                        final evolWithSurgeries = evolutions.where((e) {
+                          final s =
+                              ((e['surgeriesSummary'] ?? '') as String?)
+                                  ?.trim() ??
+                                  '';
+                          return s.isNotEmpty;
+                        }).toList();
+
+                        final evolWithWeight = evolutions.where((e) {
+                          final w = e['weight'];
+                          if (w == null) return false;
+                          return w.toString().trim().isNotEmpty;
+                        }).toList();
+
+                        return Column(
+                          children: [
+                            _SectionCard(
+                              icon: Icons.history_rounded,
+                              iconBg: const Color(0xFFE0EAFF),
+                              iconColor: const Color(0xFF2563EB),
+                              title: 'Histórico de Consultas',
+                              subtitle:
+                              'Acompanhe as consultas e evoluções deste pet',
+                              children: [
+                                if (evolutions.isEmpty)
+                                  const _EmptyText(
+                                    text:
+                                    'Nenhuma consulta registrada para este pet.',
+                                  )
+                                else
+                                  ListView.separated(
+                                    shrinkWrap: true,
+                                    physics:
+                                    const NeverScrollableScrollPhysics(),
+                                    itemCount: evolutions.length,
+                                    separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 8),
+                                    itemBuilder: (context, index) {
+                                      final data = evolutions[index];
+
+                                      final date =
+                                      (data['date'] ?? '') as String;
+                                      final time =
+                                      (data['time'] ?? '') as String;
+                                      final chiefComplaint =
+                                      (data['chiefComplaint'] ??
+                                          'Sem queixa principal')
+                                      as String;
+                                      final diagnosis =
+                                      (data['diagnosis'] ??
+                                          'Sem diagnóstico informado')
+                                      as String;
+                                      final rawWeight = data['weight'];
+                                      final weight = rawWeight == null
+                                          ? ''
+                                          : rawWeight.toString();
+                                      final prescription =
+                                      (data['prescription'] ?? '')
+                                      as String;
+                                      final vaccinesSummary =
+                                      (data['vaccinesSummary'] ?? '')
+                                      as String;
+                                      final examsSummary =
+                                      (data['examsSummary'] ?? '')
+                                      as String;
+                                      final surgeriesSummary =
+                                      (data['surgeriesSummary'] ?? '')
+                                      as String;
+
+                                      return _EvolutionItem(
+                                        date: date,
+                                        time: time,
+                                        chiefComplaint: chiefComplaint,
+                                        diagnosis: diagnosis,
+                                        weight: weight,
+                                        hasMeds:
+                                        prescription.trim().isNotEmpty,
+                                        hasExams:
+                                        examsSummary.trim().isNotEmpty,
+                                        hasVaccines:
+                                        vaccinesSummary.trim().isNotEmpty,
+                                        hasSurgeries:
+                                        surgeriesSummary.trim().isNotEmpty,
+                                      );
+                                    },
+                                  ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 12),
+                            _SectionCard(
+                              icon: Icons.vaccines_outlined,
+                              iconBg: const Color(0xFFDCFCE7),
+                              iconColor: const Color(0xFF16A34A),
+                              title: 'Vacinas',
+                              subtitle:
+                              'Vacinas aplicadas em consultas deste pet',
+                              children: [
+                                if (evolWithVaccines.isEmpty)
+                                  const _EmptyText(
+                                    text:
+                                    'Nenhuma vacina registrada para este pet.',
+                                  )
+                                else
+                                  ListView.separated(
+                                    shrinkWrap: true,
+                                    physics:
+                                    const NeverScrollableScrollPhysics(),
+                                    itemCount: evolWithVaccines.length,
+                                    separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 6),
+                                    itemBuilder: (context, index) {
+                                      final data = evolWithVaccines[index];
+                                      final date =
+                                      (data['date'] ?? '') as String;
+                                      final vaccinesSummary =
+                                      (data['vaccinesSummary'] ?? '')
+                                      as String;
+
+                                      return _RegistryItem(
+                                        icon: Icons.vaccines_outlined,
+                                        title: vaccinesSummary,
+                                        date: date,
+                                      );
+                                    },
+                                  ),
+                                const SizedBox(height: 8),
+                                _PrimarySectionButton(
+                                  label: 'Adicionar vacina',
+                                  color: const Color(0xFF16A34A),
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Fluxo de adicionar vacina em desenvolvimento.',
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
+                              ],
+                            ),
 
-                    const SizedBox(height: 12),
+                            const SizedBox(height: 12),
+                            _SectionCard(
+                              icon: Icons.medication_outlined,
+                              iconBg: const Color(0xFFEDE9FE),
+                              iconColor: const Color(0xFF7C3AED),
+                              title: 'Medicamentos',
+                              subtitle:
+                              'Medicamentos prescritos nas evoluções',
+                              children: [
+                                if (evolWithMeds.isEmpty)
+                                  const _EmptyText(
+                                    text:
+                                    'Nenhum medicamento registrado para este pet.',
+                                  )
+                                else
+                                  ListView.separated(
+                                    shrinkWrap: true,
+                                    physics:
+                                    const NeverScrollableScrollPhysics(),
+                                    itemCount: evolWithMeds.length,
+                                    separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 6),
+                                    itemBuilder: (context, index) {
+                                      final data = evolWithMeds[index];
+                                      final date =
+                                      (data['date'] ?? '') as String;
+                                      final prescription =
+                                      (data['prescription'] ?? '')
+                                      as String;
 
-                    _SectionCard(
-                      icon: Icons.medication_outlined,
-                      iconBg: const Color(0xFFEDE9FE),
-                      iconColor: const Color(0xFF7C3AED),
-                      title: 'Medicamentos',
-                      subtitle: 'Nenhum medicamento registrado',
-                      children: [
-                        const _EmptyText(
-                          text:
-                          'Nenhum medicamento registrado para este pet.',
-                        ),
-                        const SizedBox(height: 8),
-                        _PrimarySectionButton(
-                          label: 'Adicionar medicamento',
-                          color: const Color(0xFF7C3AED),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Fluxo de adicionar medicamento em desenvolvimento.',
+                                      return _RegistryItem(
+                                        icon: Icons.medication_outlined,
+                                        title: prescription,
+                                        date: date,
+                                      );
+                                    },
+                                  ),
+                                const SizedBox(height: 8),
+                                _PrimarySectionButton(
+                                  label: 'Adicionar medicamento',
+                                  color: const Color(0xFF7C3AED),
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Fluxo de adicionar medicamento em desenvolvimento.',
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              ),
-                            );
-                          },
-                        ),
+                              ],
+                            ),
 
-                      ],
-                    ),
+                            const SizedBox(height: 12),
 
-                    const SizedBox(height: 12),
+                            _SectionCard(
+                              icon: Icons.description_outlined,
+                              iconBg: const Color(0xFFFFEDD5),
+                              iconColor: const Color(0xFFEA580C),
+                              title: 'Exames',
+                              subtitle: 'Exames solicitados nas evoluções',
+                              children: [
+                                if (evolWithExams.isEmpty)
+                                  const _EmptyText(
+                                    text:
+                                    'Nenhum exame registrado para este pet.',
+                                  )
+                                else
+                                  ListView.separated(
+                                    shrinkWrap: true,
+                                    physics:
+                                    const NeverScrollableScrollPhysics(),
+                                    itemCount: evolWithExams.length,
+                                    separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 6),
+                                    itemBuilder: (context, index) {
+                                      final data = evolWithExams[index];
+                                      final date =
+                                      (data['date'] ?? '') as String;
+                                      final examsSummary =
+                                      (data['examsSummary'] ?? '')
+                                      as String;
 
-
-                    _SectionCard(
-                      icon: Icons.description_outlined,
-                      iconBg: const Color(0xFFFFEDD5),
-                      iconColor: const Color(0xFFEA580C),
-                      title: 'Exames',
-                      subtitle: 'Nenhum exame registrado',
-                      children: [
-                        const _EmptyText(
-                          text:
-                          'Nenhum exame registrado para este pet.',
-                        ),
-                        const SizedBox(height: 8),
-                        _PrimarySectionButton(
-                          label: 'Adicionar exame',
-                          color: const Color(0xFFEA580C),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Fluxo de adicionar exame em desenvolvimento.',
+                                      return _RegistryItem(
+                                        icon: Icons.science_outlined,
+                                        title: examsSummary,
+                                        date: date,
+                                      );
+                                    },
+                                  ),
+                                const SizedBox(height: 8),
+                                _PrimarySectionButton(
+                                  label: 'Adicionar exame',
+                                  color: const Color(0xFFEA580C),
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Fluxo de adicionar exame em desenvolvimento.',
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              ),
-                            );
-                          },
-                        ),
+                              ],
+                            ),
 
-                      ],
-                    ),
+                            const SizedBox(height: 12),
+                            _SectionCard(
+                              icon: Icons.monitor_heart_outlined,
+                              iconBg: const Color(0xFFFFE4E6),
+                              iconColor: const Color(0xFFDB2777),
+                              title: 'Cirurgias',
+                              subtitle: 'Cirurgias registradas nas evoluções',
+                              children: [
+                                if (evolWithSurgeries.isEmpty)
+                                  const _EmptyText(
+                                    text:
+                                    'Nenhuma cirurgia registrado para este pet.',
+                                  )
+                                else
+                                  ListView.separated(
+                                    shrinkWrap: true,
+                                    physics:
+                                    const NeverScrollableScrollPhysics(),
+                                    itemCount: evolWithSurgeries.length,
+                                    separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 6),
+                                    itemBuilder: (context, index) {
+                                      final data = evolWithSurgeries[index];
+                                      final date =
+                                      (data['date'] ?? '') as String;
+                                      final surgeriesSummary =
+                                      (data['surgeriesSummary'] ?? '')
+                                      as String;
 
-                    const SizedBox(height: 12),
-
-                    _SectionCard(
-                      icon: Icons.monitor_heart_outlined,
-                      iconBg: const Color(0xFFFFE4E6),
-                      iconColor: const Color(0xFFDB2777),
-                      title: 'Cirurgias',
-                      subtitle: 'Nenhuma cirurgia registrada',
-                      children: [
-                        const _EmptyText(
-                          text:
-                          'Nenhuma cirurgia registrada para este pet.',
-                        ),
-                        const SizedBox(height: 8),
-                        _PrimarySectionButton(
-                          label: 'Adicionar cirurgia',
-                          color: const Color(0xFFDB2777),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Fluxo de adicionar cirurgia em desenvolvimento.',
+                                      return _RegistryItem(
+                                        icon: Icons.monitor_heart_outlined,
+                                        title: surgeriesSummary,
+                                        date: date,
+                                      );
+                                    },
+                                  ),
+                                const SizedBox(height: 8),
+                                _PrimarySectionButton(
+                                  label: 'Adicionar cirurgia',
+                                  color: const Color(0xFFDB2777),
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Fluxo de adicionar cirurgia em desenvolvimento.',
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              ),
-                            );
-                          },
-                        ),
+                              ],
+                            ),
 
-                      ],
-                    ),
+                            const SizedBox(height: 12),
 
-                    const SizedBox(height: 12),
+                            _SectionCard(
+                              icon: Icons.trending_up_rounded,
+                              iconBg: const Color(0xFFFEF9C3),
+                              iconColor: const Color(0xFFA16207),
+                              title: 'Evolução de Peso',
+                              subtitle:
+                              'Registros de peso nas consultas do pet',
+                              children: [
+                                if (evolWithWeight.isEmpty)
+                                  const _EmptyText(
+                                    text:
+                                    'Ainda não há registros de peso para este pet.',
+                                  )
+                                else
+                                  ListView.separated(
+                                    shrinkWrap: true,
+                                    physics:
+                                    const NeverScrollableScrollPhysics(),
+                                    itemCount: evolWithWeight.length,
+                                    separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 6),
+                                    itemBuilder: (context, index) {
+                                      final data = evolWithWeight[index];
+                                      final date =
+                                      (data['date'] ?? '') as String;
+                                      final weight =
+                                      data['weight'].toString();
 
-                    _SectionCard(
-                      icon: Icons.trending_up_rounded,
-                      iconBg: const Color(0xFFFEF9C3),
-                      iconColor: const Color(0xFFA16207),
-                      title: 'Evolução de Peso',
-                      subtitle: 'Registre a evolução de peso do pet',
-                      children: [
-                        const _EmptyText(
-                          text:
-                          'Ainda não há registros de peso para este pet.',
-                        ),
-                        const SizedBox(height: 8),
-                        _PrimarySectionButton(
-                          label: 'Adicionar peso',
-                          color: const Color(0xFFA16207),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Fluxo de adicionar peso em desenvolvimento.',
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-
-                      ],
+                                      return _RegistryItem(
+                                        icon: Icons.monitor_weight_outlined,
+                                        title: '$weight kg',
+                                        date: date,
+                                      );
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
               ),
             ),
-
             Positioned(
               right: 16,
               bottom: 16,
-              child: OutlinedButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(30),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
                         builder: (_) => NewEvolutionScreen(
-                            petId: patient.id,
-                            petName: patient.name,
-                            petBreed: patient.breed,
-                            tutorName: patient.ownerName)),
-                  );
-                },
-                child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        ClickVetColors.goldLight,
-                        ClickVetColors.gold,
+                          petId: patient.id,
+                          petName: patient.name,
+                          petBreed: patient.breed,
+                          tutorName: patient.ownerName,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          ClickVetColors.goldLight,
+                          ClickVetColors.gold,
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x33000000),
+                          blurRadius: 10,
+                          offset: Offset(0, 6),
+                        ),
                       ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x33000000),
-                        blurRadius: 10,
-                        offset: Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.add,
-                    color: Colors.white,
-                    size: 30,
+                    child: const Icon(
+                      Icons.add,
+                      color: Colors.white,
+                      size: 30,
+                    ),
                   ),
                 ),
               ),
             ),
+
           ],
         ),
       ),
@@ -414,7 +642,7 @@ class patient {
   static String ownerName = '';
 }
 
-/// ----- WIDGETS AUXILIARES -----
+/// ---------- WIDGETS AUXILIARES ----------
 
 class _PetHeaderCard extends StatelessWidget {
   const _PetHeaderCard({
@@ -559,8 +787,7 @@ class _SectionCard extends StatelessWidget {
       ),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-        childrenPadding:
-        const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         collapsedBackgroundColor: Colors.white,
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
@@ -650,7 +877,6 @@ class _PrimarySectionButton extends StatelessWidget {
   }
 }
 
-
 class _EmptyText extends StatelessWidget {
   const _EmptyText({required this.text});
 
@@ -690,6 +916,226 @@ class _ErrorCard extends StatelessWidget {
           color: Color(0xFFB91C1C),
           fontSize: 13,
         ),
+      ),
+    );
+  }
+}
+
+class _EvolutionItem extends StatelessWidget {
+  const _EvolutionItem({
+    required this.date,
+    required this.time,
+    required this.chiefComplaint,
+    required this.diagnosis,
+    required this.weight,
+    required this.hasMeds,
+    required this.hasExams,
+    required this.hasVaccines,
+    required this.hasSurgeries,
+  });
+
+  final String date;
+  final String time;
+  final String chiefComplaint;
+  final String diagnosis;
+
+  final String weight;
+  final bool hasMeds;
+  final bool hasExams;
+  final bool hasVaccines;
+  final bool hasSurgeries;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDate = date.isNotEmpty;
+    final hasTime = time.isNotEmpty;
+    final hasWeight = weight.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: ClickVetColors.gold.withOpacity(0.4),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (hasDate || hasTime)
+            Row(
+              children: [
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  size: 14,
+                  color: ClickVetColors.goldDark,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  [
+                    if (hasDate) date,
+                    if (hasTime) time,
+                  ].join(' • '),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: ClickVetColors.goldDark,
+                  ),
+                ),
+              ],
+            ),
+          if (hasDate || hasTime) const SizedBox(height: 6),
+          Text(
+            chiefComplaint,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            diagnosis,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              if (hasWeight)
+                _ChipTag(
+                  icon: Icons.monitor_weight_outlined,
+                  label: 'Peso: $weight kg',
+                ),
+              if (hasMeds)
+                const _ChipTag(
+                  icon: Icons.medication_outlined,
+                  label: 'Medicamentos prescritos',
+                ),
+              if (hasExams)
+                const _ChipTag(
+                  icon: Icons.science_outlined,
+                  label: 'Exames solicitados',
+                ),
+              if (hasVaccines)
+                const _ChipTag(
+                  icon: Icons.vaccines_outlined,
+                  label: 'Vacinas aplicadas',
+                ),
+              if (hasSurgeries)
+                const _ChipTag(
+                  icon: Icons.monitor_heart_outlined,
+                  label: 'Cirurgias registradas',
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChipTag extends StatelessWidget {
+  const _ChipTag({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: ClickVetColors.gold.withOpacity(0.5),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: ClickVetColors.goldDark),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RegistryItem extends StatelessWidget {
+  const _RegistryItem({
+    required this.icon,
+    required this.title,
+    required this.date,
+  });
+
+  final IconData icon;
+  final String title;
+  final String date;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: ClickVetColors.gold.withOpacity(0.4),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: ClickVetColors.goldDark),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (date.isNotEmpty)
+                  Text(
+                    date,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.black54,
+                    ),
+                  ),
+                if (date.isNotEmpty) const SizedBox(height: 2),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
