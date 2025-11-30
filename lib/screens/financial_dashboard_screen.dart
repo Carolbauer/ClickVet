@@ -1,3 +1,4 @@
+import 'package:app/screens/financial_transactions_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:app/theme/clickvet_colors.dart';
 import 'package:app/widgets/vet_scaffold.dart';
@@ -14,7 +15,7 @@ class FinancialDashboardScreen extends StatefulWidget {
 }
 
 class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
-  String _selectedPeriod = 'month'; // week | month | year
+  String _selectedPeriod = 'month';
 
   // Mock de resumo financeiro
   final _financialSummary = const _FinancialSummary(
@@ -120,8 +121,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return VetScaffold(
-      selectedKey:
-      DrawerItemKey.financial,
+      selectedKey: DrawerItemKey.financial,
       appBar: AppBar(
         backgroundColor: ClickVetColors.bg,
         elevation: 0,
@@ -166,7 +166,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                 _PeriodChip(
                   label: 'Semana',
                   selected: _selectedPeriod == 'week',
-                  onTap: () {
+                  onPressed: () {
                     setState(() => _selectedPeriod = 'week');
                   },
                 ),
@@ -174,7 +174,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                 _PeriodChip(
                   label: 'Mês',
                   selected: _selectedPeriod == 'month',
-                  onTap: () {
+                  onPressed: () {
                     setState(() => _selectedPeriod = 'month');
                   },
                 ),
@@ -182,7 +182,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                 _PeriodChip(
                   label: 'Ano',
                   selected: _selectedPeriod == 'year',
-                  onTap: () {
+                  onPressed: () {
                     setState(() => _selectedPeriod = 'year');
                   },
                 ),
@@ -247,10 +247,14 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                     child: _QuickActionButton(
                       icon: Icons.add,
                       label: 'Lançamento',
-                      onTap: () => _showSoon(
-                        context,
-                        'Navegar para tela de lançamentos',
-                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                            const FinancialTransactionsScreen(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -258,7 +262,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                     child: _QuickActionButton(
                       icon: Icons.inventory_2_outlined,
                       label: 'Estoque',
-                      onTap: () => _showSoon(
+                      onPressed: () => _showSoon(
                         context,
                         'Navegar para tela de estoque',
                       ),
@@ -273,7 +277,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                     child: _QuickActionButton(
                       icon: Icons.bar_chart_outlined,
                       label: 'Relatórios',
-                      onTap: () => _showSoon(
+                      onPressed: () => _showSoon(
                         context,
                         'Navegar para relatórios financeiros',
                       ),
@@ -284,7 +288,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                     child: _QuickActionButton(
                       icon: Icons.shopping_cart_outlined,
                       label: 'Produtos',
-                      onTap: () => _showSoon(
+                      onPressed: () => _showSoon(
                         context,
                         'Navegar para produtos',
                       ),
@@ -440,25 +444,23 @@ class _PeriodChip extends StatelessWidget {
   const _PeriodChip({
     required this.label,
     required this.selected,
-    required this.onTap,
+    required this.onPressed,
   });
 
   final String label;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     final bg = selected ? ClickVetColors.gold : Colors.white;
-    final textColor =
-    selected ? Colors.white : ClickVetColors.goldDark;
+    final textColor = selected ? Colors.white : ClickVetColors.goldDark;
     final borderColor = ClickVetColors.gold;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: onPressed,
       child: Container(
-        padding:
-        const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(999),
@@ -510,8 +512,7 @@ class _SummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment:
-            MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
@@ -522,8 +523,7 @@ class _SummaryCard extends StatelessWidget {
                       color: iconBg,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(icon,
-                        color: iconColor, size: 22),
+                    child: Icon(icon, color: iconColor, size: 22),
                   ),
                   const SizedBox(width: 10),
                   Text(
@@ -541,8 +541,7 @@ class _SummaryCard extends StatelessWidget {
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: badgeBg,
-                    borderRadius:
-                    BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     badgeText!,
@@ -650,18 +649,18 @@ class _QuickActionButton extends StatelessWidget {
   const _QuickActionButton({
     required this.icon,
     required this.label,
-    required this.onTap,
+    required this.onPressed,
   });
 
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
+      onTap: onPressed,
       child: Container(
         height: 74,
         decoration: BoxDecoration(
@@ -670,8 +669,7 @@ class _QuickActionButton extends StatelessWidget {
           border: Border.all(color: ClickVetColors.gold, width: 1.6),
         ),
         child: Column(
-          mainAxisAlignment:
-          MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
@@ -717,8 +715,7 @@ class _TransactionCard extends StatelessWidget {
         border: Border.all(color: ClickVetColors.gold, width: 1.4),
       ),
       child: Row(
-        mainAxisAlignment:
-        MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
@@ -743,8 +740,7 @@ class _TransactionCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     transaction.description,
@@ -765,8 +761,7 @@ class _TransactionCard extends StatelessWidget {
             ],
           ),
           Column(
-            crossAxisAlignment:
-            CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 '${isIncome ? '+' : '-'} ${formatMoney(transaction.amount)}',
@@ -806,13 +801,12 @@ class _LowStockCard extends StatelessWidget {
         color: const Color(0xFFFEF9C3),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFFEAB308),
+          color: Color(0xFFEAB308),
           width: 1.6,
         ),
       ),
       child: Row(
-        mainAxisAlignment:
-        MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
@@ -831,8 +825,7 @@ class _LowStockCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     item.name,
@@ -853,8 +846,7 @@ class _LowStockCard extends StatelessWidget {
             ],
           ),
           Column(
-            crossAxisAlignment:
-            CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 'Qtd: ${item.quantity}',
