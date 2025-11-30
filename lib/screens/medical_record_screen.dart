@@ -1,3 +1,4 @@
+import 'package:app/screens/new_evolution_screen.dart';
 import 'package:app/theme/clickvet_colors.dart';
 import 'package:app/widgets/vet_scaffold.dart';
 import 'package:app/widgets/app_drawer.dart';
@@ -133,6 +134,10 @@ class MedicalRecordScreen extends StatelessWidget {
                         final age =
                         _ageFrom(m['birthDate'] ?? m['age']);
 
+                        patient.id = petId;
+                        patient.name = name;
+                        patient.breed = breed;
+                        patient.ownerName = tutorName;
                         return _PetHeaderCard(
                           name: name,
                           breed: breed,
@@ -355,14 +360,15 @@ class MedicalRecordScreen extends StatelessWidget {
             Positioned(
               right: 16,
               bottom: 16,
-              child: GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Fluxo de nova evolução em desenvolvimento.',
-                      ),
-                    ),
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => NewEvolutionScreen(
+                            petId: patient.id,
+                            petName: patient.name,
+                            petBreed: patient.breed,
+                            tutorName: patient.ownerName)),
                   );
                 },
                 child: Container(
@@ -399,6 +405,13 @@ class MedicalRecordScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class patient {
+  static String id = '';
+  static String name = '';
+  static String breed = '';
+  static String ownerName = '';
 }
 
 /// ----- WIDGETS AUXILIARES -----
