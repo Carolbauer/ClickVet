@@ -13,9 +13,8 @@ class InventoryScreen extends StatefulWidget {
 }
 
 class _InventoryScreenState extends State<InventoryScreen> {
-  // Filtro
   String _searchTerm = '';
-  String _selectedTab = 'all'; // all | vacina | medicamento | produto
+  String _selectedTab = 'all';
 
   // Lista de itens de estoque (mock)
   final List<_InventoryItem> _items = [
@@ -117,7 +116,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     ),
   ];
 
-  // Campos do modal de novo item
   String _newType = 'medicamento';
   final _nameCtrl = TextEditingController();
   final _qtyCtrl = TextEditingController(text: '0');
@@ -141,8 +139,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     _validityCtrl.dispose();
     super.dispose();
   }
-
-  // ---------- FUNÇÕES AUXILIARES ----------
 
   List<_InventoryItem> get _filteredItems {
     return _items.where((item) {
@@ -237,10 +233,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return int.tryParse(text.trim()) ?? 0;
   }
 
-  // ---------- MODAL: NOVO ITEM ----------
 
   Future<void> _openNewItemDialog() async {
-    // reset
     _newType = 'medicamento';
     _nameCtrl.clear();
     _qtyCtrl.text = '0';
@@ -278,7 +272,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Header
                       Row(
                         children: [
                           const SizedBox(width: 24),
@@ -313,7 +306,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Tipo
                       const _FieldLabel('Tipo'),
                       const SizedBox(height: 4),
                       _DropdownTipo(
@@ -324,7 +316,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Nome do item
                       const _FieldLabel('Nome do Item'),
                       const SizedBox(height: 4),
                       TextField(
@@ -335,7 +326,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Quantidade / estoque mínimo
                       Row(
                         children: [
                           Expanded(
@@ -379,7 +369,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Custo / Preço
                       Row(
                         children: [
                           Expanded(
@@ -423,7 +412,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Fornecedor
                       const _FieldLabel('Fornecedor'),
                       const SizedBox(height: 4),
                       TextField(
@@ -434,7 +422,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Lote / Validade
                       Row(
                         children: [
                           Expanded(
@@ -495,7 +482,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Botões
                       SizedBox(
                         width: double.infinity,
                         height: 44,
@@ -580,7 +566,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     Navigator.of(context).pop();
   }
 
-  // ---------- BUILD ----------
 
   @override
   Widget build(BuildContext context) {
@@ -588,7 +573,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final low = _lowStockItems;
 
     return VetScaffold(
-      selectedKey: DrawerItemKey.financial, // mesmo módulo do financeiro
+      selectedKey: DrawerItemKey.financial,
       appBar: AppBar(
         backgroundColor: ClickVetColors.bg,
         elevation: 0,
@@ -644,7 +629,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Search
+
               TextField(
                 decoration: InputDecoration(
                   hintText: 'Buscar produtos...',
@@ -682,7 +667,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
               ),
               const SizedBox(height: 10),
 
-              // Tabs (filtros)
               Row(
                 children: [
                   _FilterChip(
@@ -713,7 +697,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
               const SizedBox(height: 16),
 
-              // Cards de resumo
               Row(
                 children: [
                   Expanded(
@@ -764,7 +747,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
               const SizedBox(height: 16),
 
-              // Aviso estoque baixo
               if (low.isNotEmpty)
                 Container(
                   width: double.infinity,
@@ -801,7 +783,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
               const SizedBox(height: 16),
 
-              // Lista
               if (filtered.isEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 32),
@@ -857,12 +838,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 }
 
-// ---------- MODELOS ----------
 
 class _InventoryItem {
   final int id;
   final String name;
-  final String type; // vacina | medicamento | produto
+  final String type;
   final int quantity;
   final int minStock;
   final double cost;
@@ -1028,7 +1008,6 @@ class _InventoryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
               Container(
@@ -1106,7 +1085,6 @@ class _InventoryCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // Grid de info
           Row(
             children: [
               Expanded(
@@ -1214,7 +1192,6 @@ class _InventoryCard extends StatelessWidget {
           const Divider(height: 1, color: Color(0xFFE5E7EB)),
           const SizedBox(height: 6),
 
-          // Footer 1
           Row(
             mainAxisAlignment:
             MainAxisAlignment.spaceBetween,
@@ -1288,7 +1265,6 @@ class _InventoryCard extends StatelessWidget {
           const Divider(height: 1, color: Color(0xFFE5E7EB)),
           const SizedBox(height: 6),
 
-          // Footer 2
           Row(
             mainAxisAlignment:
             MainAxisAlignment.spaceBetween,
@@ -1316,7 +1292,6 @@ class _InventoryCard extends StatelessWidget {
   }
 }
 
-// ------------ HELPERS MODAL ------------
 
 class _FieldLabel extends StatelessWidget {
   const _FieldLabel(this.text, {super.key});
