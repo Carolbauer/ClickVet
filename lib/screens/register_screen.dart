@@ -179,7 +179,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextField(
                     controller: _nameController,
                     textInputAction: TextInputAction.next,
-                    decoration: _deco("Nome Completo", icon: Icons.person),
+                      decoration: _deco("Nome Completo", icon: Icons.person),
                   ),
                   const SizedBox(height: 16),
 

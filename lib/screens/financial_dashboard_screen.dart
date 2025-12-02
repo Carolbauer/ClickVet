@@ -1,4 +1,5 @@
 import 'package:app/screens/financial_transactions_screen.dart';
+import 'package:app/screens/inventory_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:app/theme/clickvet_colors.dart';
 import 'package:app/widgets/vet_scaffold.dart';
@@ -128,7 +129,8 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
         title: const Text(
           'Financeiro',
           style: TextStyle(
-            color: ClickVetColors.gold,
+            color: ClickVetColors.primary,
+            fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -262,10 +264,14 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                     child: _QuickActionButton(
                       icon: Icons.inventory_2_outlined,
                       label: 'Estoque',
-                      onPressed: () => _showSoon(
-                        context,
-                        'Navegar para tela de estoque',
-                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                            const InventoryScreen(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],

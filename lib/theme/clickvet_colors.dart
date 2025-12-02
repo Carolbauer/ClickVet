@@ -9,5 +9,7 @@ class ClickVetColors {
   static const goldLight = Color(0xFFD4AF37);
   static const goldDark  = Color(0xFF8B6914);
   static const white     = Color(0xFFFFFFFF);
+  static const primary = Color(0xFFB8860B);
+  static const primaryDark = Color(0xFF8B6914);
 
 }
