@@ -1,5 +1,6 @@
 import 'package:app/screens/financial_transactions_screen.dart';
 import 'package:app/screens/inventory_screen.dart';
+import 'package:app/screens/product_services_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:app/theme/clickvet_colors.dart';
 import 'package:app/widgets/vet_scaffold.dart';
@@ -294,10 +295,14 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                     child: _QuickActionButton(
                       icon: Icons.shopping_cart_outlined,
                       label: 'Produtos',
-                      onPressed: () => _showSoon(
-                        context,
-                        'Navegar para produtos',
-                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                            const ProductsServicesScreen(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
