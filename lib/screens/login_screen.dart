@@ -114,7 +114,6 @@ class _LoginScreen extends State<LoginScreen> {
                 Image.asset('assets/images/logo1.png', height: 200),
                 const SizedBox(height: 8),
 
-                // E-mail
                 TextFormField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -130,7 +129,6 @@ class _LoginScreen extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Senha
                 TextFormField(
                   controller: passwordController,
                   obscureText: !isVisible,
@@ -151,7 +149,6 @@ class _LoginScreen extends State<LoginScreen> {
                   ).copyWith(errorText: passwordTextError),
                 ),
 
-                // Esqueci minha senha
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -198,7 +195,6 @@ class _LoginScreen extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Botão ENTRAR
                 SizedBox(
                   height: 56,
                   child: DecoratedBox(
@@ -258,7 +254,6 @@ class _LoginScreen extends State<LoginScreen> {
 
                 const SizedBox(height: 16),
 
-                // divisor
                 Row(
                   children: [
                     Expanded(
@@ -278,14 +273,12 @@ class _LoginScreen extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Botão Google
                 SizedBox(
                   height: 50,
                   child: OutlinedButton.icon(
                     onPressed: isLoading
                         ? null
                         : () async {
-                      // limpa erros de e-mail/senha (erros do login normal)
                       setState(() {
                         emailTextError = null;
                         passwordTextError = null;
@@ -347,7 +340,6 @@ class _LoginScreen extends State<LoginScreen> {
 
                 const SizedBox(height: 16),
 
-                // Cadastre-se
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

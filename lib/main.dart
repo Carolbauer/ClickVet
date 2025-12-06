@@ -17,7 +17,6 @@ void main() async {
   );
 
   final firebaseAuth = FirebaseAuthService();
-  await firebaseAuth.makeLogin("bauercaca@gmail.com", "123456");
 
   runApp(const MyApp());
 }

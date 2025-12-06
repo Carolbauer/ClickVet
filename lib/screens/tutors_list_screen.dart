@@ -1,3 +1,4 @@
+import 'package:app/screens/edit_tutor_screen.dart';
 import 'package:app/widgets/app_drawer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -273,7 +274,17 @@ class _TutorListScreenState extends State<TutorListScreen> {
                                 registerDate:
                                 _fmtDate(m['registeredAt']),
                                 onPets: () {},
-                                onEdit: () {},
+                                onEdit: () {
+                                  final String currentId = pageDocs[i].id;
+
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => EditTutorScreen(
+                                        tutorId: currentId,
+                                      ),
+                                    ),
+                                  );
+                                },
                                 onCall: () {},
                               );
                             },
@@ -335,7 +346,7 @@ class _TutorListScreenState extends State<TutorListScreen> {
   }
 }
 
-/// ----- Widgets auxiliares -----
+//Widgets auxiliares
 
 class _StatBox extends StatelessWidget {
   const _StatBox({required this.value, required this.label, this.color});

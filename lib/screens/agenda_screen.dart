@@ -1,4 +1,6 @@
 
+import 'package:app/screens/medical_record_screen.dart';
+import 'package:app/screens/new_evolution_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -68,29 +70,31 @@ class _AgendaScreenState extends State<AgendaScreen> {
   }
 
   Future<void> _confirmAppointment(_Appointment appointment) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Confirmar consulta'),
-        content: const Text(
-          'Você tem certeza de que deseja confirmar esta consulta?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirmar'),
-          ),
-        ],
-      ),
-    );
+    final vet = FirebaseAuth.instance.currentUser;
+    if (vet == null) return;
 
-    if (confirmed == true) {
-      final vet = FirebaseAuth.instance.currentUser;
-      if (vet == null) return;
+    if (appointment.status == AppointmentStatus.pending) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Confirmar e Iniciar Atendimento'),
+          content: const Text(
+            'Ao confirmar, você será direcionado para registrar a evolução desta consulta.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Confirmar e Atender'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
 
       try {
         await FirebaseFirestore.instance
@@ -98,15 +102,64 @@ class _AgendaScreenState extends State<AgendaScreen> {
             .doc(vet.uid)
             .collection('appointments')
             .doc(appointment.id)
-            .update({'status': 'Confirmado'});
+            .update({
+          'status': 'Em Atendimento',
+          'confirmedAt': FieldValue.serverTimestamp(),
+        });
+
+        appointment.status = AppointmentStatus.inProgress;
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erro ao confirmar: $e')),
         );
+        return;
+      }
+    }
+
+    if (appointment.petId.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Não foi possível iniciar o atendimento: este agendamento não está vinculado a um pet.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    final finished = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => NewEvolutionScreen(
+          petId: appointment.petId,
+          petName: appointment.petName,
+          petBreed: appointment.breed,
+          tutorName: appointment.owner
+        ),
+      ),
+    );
+
+    if (finished == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(vet.uid)
+            .collection('appointments')
+            .doc(appointment.id)
+            .update({'status': 'Concluído'});
+
+        appointment.status = AppointmentStatus.done;
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao concluir consulta: $e')),
+        );
       }
     }
   }
+
 
   Future<void> _deleteAppointment(_Appointment appointment) async {
     final confirmed = await showDialog<bool>(
@@ -267,7 +320,6 @@ class _AgendaScreenState extends State<AgendaScreen> {
             ),
             const SizedBox(height: 8),
 
-            // ✅ LISTA VINDO DO FIRESTORE, mantendo teus cards/botões
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: _appointmentsStream(vet.uid),
@@ -291,6 +343,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       date: dt,
                       time: (m['time'] ?? '--:--').toString(),
                       petName: (m['petName'] ?? '—').toString(),
+                      petId: (m['petId'] ?? '').toString(),
                       breed: (m['petBreed'] ?? '—').toString(),
                       owner: (m['tutorName'] ?? '—').toString(),
                       ownerPhone: (m['tutorPhone'] ?? m['ownerPhone'] ?? '').toString(),
@@ -342,6 +395,7 @@ class _Appointment {
     required this.date,
     required this.time,
     required this.petName,
+    required this.petId,
     required this.breed,
     required this.owner,
     required this.ownerPhone,
@@ -353,6 +407,7 @@ class _Appointment {
   final DateTime date;
   final String time;
   final String petName;
+  final String petId;
   final String breed;
   final String owner;
   final String ownerPhone;
@@ -536,11 +591,14 @@ class _AppointmentCard extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    if (status == AppointmentStatus.pending)
+                    if (status == AppointmentStatus.pending ||
+                        status == AppointmentStatus.inProgress)
                       ElevatedButton.icon(
                         onPressed: () => onConfirm(appointment),
-                        icon: const Icon(Icons.check, size: 16),
-                        label: const Text('Confirmar'),
+                        icon: const Icon(Icons.play_arrow, size: 16),
+                        label: Text(status == AppointmentStatus.pending
+                            ? 'Confirmar e Atender'
+                            : 'Retomar Atendimento',),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
