@@ -3,6 +3,7 @@ import 'package:app/screens/financial_dashboard_screen.dart';
 import 'package:app/screens/medical_record_screen.dart';
 import 'package:app/screens/new_schedule_screen.dart';
 import 'package:app/screens/patients_screen.dart';
+import 'package:app/screens/profile_screen.dart';
 import 'package:app/screens/tutors_list_screen.dart';
 import 'package:app/widgets/app_drawer.dart';
 import 'package:app/screens/login_screen.dart';
@@ -95,6 +96,15 @@ class _VetScaffoldState extends State<VetScaffold> {
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const HomeScreen()),
                     (route) => false,
+              );
+            },
+
+            onProfile: (){
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ProfileScreen(),
+                ),
               );
             },
 

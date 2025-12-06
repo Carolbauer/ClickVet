@@ -35,6 +35,7 @@ class AppDrawer extends StatelessWidget {
 
   final DrawerItemKey? selectedKey;
 
+  final VoidCallback? onProfile;
   final VoidCallback? onHome;
   final VoidCallback? onAgenda;
   final VoidCallback? onNewSChedule;
@@ -42,7 +43,6 @@ class AppDrawer extends StatelessWidget {
   final VoidCallback? onTutorPatients;
   final VoidCallback? onPetRegister;
   final VoidCallback? onMedicalRecord;
-  final VoidCallback? onProfile;
   final VoidCallback? onSettings;
   final VoidCallback? onLogout;
   final VoidCallback? onFinancialDashboard;
@@ -121,7 +121,7 @@ class AppDrawer extends StatelessWidget {
                 _item(
                   context,
                   keyItem: DrawerItemKey.petRegister,
-                  icon: Icons.pets_outlined,
+                  icon: Icons.pets,
                   label: 'Cadastrar Pet',
                   onTap: onPetRegister,
                 ),
@@ -149,7 +149,7 @@ class AppDrawer extends StatelessWidget {
                 _item(
                   context,
                   keyItem: DrawerItemKey.tutors,
-                  icon: Icons.book_online_outlined,
+                  icon: Icons.money_off_outlined,
                   label: 'Financeiro',
                   onTap: onFinancialDashboard,
                 ),

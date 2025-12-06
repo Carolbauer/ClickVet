@@ -2,6 +2,7 @@ import 'package:app/screens/agenda_screen.dart';
 import 'package:app/screens/financial_dashboard_screen.dart';
 import 'package:app/screens/new_schedule_screen.dart';
 import 'package:app/screens/patients_screen.dart';
+import 'package:app/screens/profile_screen.dart';
 import 'package:app/screens/tutors_list_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -109,6 +110,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   SnackBar(content: Text('Erro ao sair: $e')),
                 );
               }
+            },
+            onProfile: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
             },
             onTutorPatients: () {
               Navigator.pop(context);

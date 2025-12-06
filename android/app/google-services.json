@@ -7,12 +7,25 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:426822002002:android:a341eb5185d88e11b2068b",
+        "mobilesdk_app_id": "1:426822002002:android:192a72d920664631b2068b",
         "android_client_info": {
-          "package_name": "com.example.app"
+          "package_name": "com.clickvet.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "426822002002-d5hkvin0rpv07achq37oohmqp4gj84c2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.clickvet.app",
+            "certificate_hash": "247ca85692d71cc7d31c2a55b4c0ab9fc752ffba"
+          }
+        },
+        {
+          "client_id": "426822002002-racl1m313ofn9ooc1k60qdv475gjpiso.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBacqagNXw9bClCKeWmEIah4P_X7Ih97DM"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "426822002002-racl1m313ofn9ooc1k60qdv475gjpiso.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "426822002002-1k38d8f4gu444oq5fd3mfb1o4kjd1nsi.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.app"
+              }
+            }
+          ]
         }
       }
     }

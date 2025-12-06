@@ -113,15 +113,24 @@ class _LoginScreen extends State<LoginScreen> {
                 const SizedBox(height: 24),
                 Image.asset('assets/images/logo1.png', height: 200),
                 const SizedBox(height: 8),
+
+                // E-mail
                 TextFormField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.username, AutofillHints.email],
-                  decoration: _deco(label: 'Digite o seu Email', leading: Icons.email)
-                      .copyWith(errorText: emailTextError),
+                  autofillHints: const [
+                    AutofillHints.username,
+                    AutofillHints.email
+                  ],
+                  decoration: _deco(
+                    label: 'Digite o seu Email',
+                    leading: Icons.email,
+                  ).copyWith(errorText: emailTextError),
                 ),
                 const SizedBox(height: 16),
+
+                // Senha
                 TextFormField(
                   controller: passwordController,
                   obscureText: !isVisible,
@@ -136,11 +145,13 @@ class _LoginScreen extends State<LoginScreen> {
                         isVisible ? Icons.visibility : Icons.visibility_off,
                         color: const Color(0xFF8C7A3E),
                       ),
-                      onPressed: () => setState(() => isVisible = !isVisible),
+                      onPressed: () =>
+                          setState(() => isVisible = !isVisible),
                     ),
                   ).copyWith(errorText: passwordTextError),
                 ),
 
+                // Esqueci minha senha
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -148,22 +159,31 @@ class _LoginScreen extends State<LoginScreen> {
                       final email = emailController.text.trim();
                       if (email.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Insira seu e-mail para recuperar a senha.')),
+                          const SnackBar(
+                            content: Text(
+                                'Insira seu e-mail para recuperar a senha.'),
+                          ),
                         );
                         return;
                       }
                       try {
-                        await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                        await FirebaseAuth.instance
+                            .sendPasswordResetEmail(email: email);
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Enviamos um link de recuperação para $email.')),
+                          SnackBar(
+                            content: Text(
+                                'Enviamos um link de recuperação para $email.'),
+                          ),
                         );
                       } on FirebaseAuthException catch (e) {
                         final msg = e.code == 'user-not-found'
                             ? 'Usuário não encontrado.'
                             : 'Erro ao enviar e-mail de recuperação.';
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(msg)),
+                        );
                       }
                     },
                     child: const Text(
@@ -177,6 +197,8 @@ class _LoginScreen extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
+
+                // Botão ENTRAR
                 SizedBox(
                   height: 56,
                   child: DecoratedBox(
@@ -201,10 +223,13 @@ class _LoginScreen extends State<LoginScreen> {
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                        ).copyWith(
-                        overlayColor: MaterialStateProperty.resolveWith<Color?>(
-                              (states) => states.contains(MaterialState.pressed)
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ).copyWith(
+                        overlayColor:
+                        MaterialStateProperty.resolveWith<Color?>(
+                              (states) => states.contains(
+                              MaterialState.pressed)
                               ? const Color(0xFF8B6914).withOpacity(0.20)
                               : null,
                         ),
@@ -214,7 +239,8 @@ class _LoginScreen extends State<LoginScreen> {
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor:
+                          AlwaysStoppedAnimation<Color>(Colors.white),
                           strokeWidth: 2,
                         ),
                       )
@@ -231,30 +257,82 @@ class _LoginScreen extends State<LoginScreen> {
                 ),
 
                 const SizedBox(height: 16),
+
+                // divisor
                 Row(
                   children: [
-                    Expanded(child: Container(height: 1, color: Colors.black26)),
+                    Expanded(
+                        child:
+                        Container(height: 1, color: Colors.black26)),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Text('ou entre com', style: TextStyle(color: Colors.black54)),
+                      child: Text(
+                        'ou entre com',
+                        style: TextStyle(color: Colors.black54),
+                      ),
                     ),
-                    Expanded(child: Container(height: 1, color: Colors.black26)),
+                    Expanded(
+                        child:
+                        Container(height: 1, color: Colors.black26)),
                   ],
                 ),
                 const SizedBox(height: 12),
+
+                // Botão Google
                 SizedBox(
                   height: 50,
                   child: OutlinedButton.icon(
-                    onPressed: isLoading ? null : () {/* Google Sign-In */},
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                      // limpa erros de e-mail/senha (erros do login normal)
+                      setState(() {
+                        emailTextError = null;
+                        passwordTextError = null;
+                      });
+
+                      setState(() => isLoading = true);
+                      try {
+                        await firebaseAuth.signInWithGoogle();
+                        if (!mounted) return;
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const HomeScreen(),
+                          ),
+                        );
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'Erro ao entrar com o Google: $e'),
+                          ),
+                        );
+                      } finally {
+                        if (mounted) {
+                          setState(() => isLoading = false);
+                        }
+                      }
+                    },
                     style: OutlinedButton.styleFrom(
                       backgroundColor: Colors.white,
                       side: const BorderSide(color: Color(0xFFE0E0E0)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     icon: Padding(
                       padding: const EdgeInsets.only(right: 8.0),
-                      child: Image.asset('assets/images/google_logo.png', width: 18, height: 18),
+                      child: Image.asset(
+                        'assets/images/google_logo.png',
+                        width: 18,
+                        height: 18,
+                      ),
                     ),
                     label: const Text(
                       'Entrar com Google',
@@ -269,17 +347,23 @@ class _LoginScreen extends State<LoginScreen> {
 
                 const SizedBox(height: 16),
 
+                // Cadastre-se
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Não possui uma conta?', style: TextStyle(color: Colors.black54)),
+                    const Text(
+                      'Não possui uma conta?',
+                      style: TextStyle(color: Colors.black54),
+                    ),
                     TextButton(
                       onPressed: isLoading
                           ? null
                           : () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterScreen(),
+                          ),
                         );
                       },
                       child: const Text(
