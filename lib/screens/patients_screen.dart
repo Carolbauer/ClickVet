@@ -1,4 +1,3 @@
-import 'package:app/screens/agenda_screen.dart';
 import 'package:app/screens/edit_pet_screen.dart';
 import 'package:app/screens/home_screen.dart';
 import 'package:app/screens/medical_record_screen.dart';
@@ -117,235 +116,238 @@ class _PatientsScreenState extends State<PatientsScreen> {
       ),
       body: SafeArea(
         child: Column(
-            children: [
-        Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: TextField(
-          controller: _searchController,
-          onChanged: (_) => setState(() {}),
-          decoration: InputDecoration(
-            hintText: 'Buscar pacientes...',
-            prefixIcon: const Icon(
-              Icons.search,
-              color: ClickVetColors.gold,
-            ),
-            filled: true,
-            fillColor: ClickVetColors.bg,
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(
-                color: ClickVetColors.gold,
-                width: 1.8,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(
-                color: ClickVetColors.goldDark,
-                width: 2,
-              ),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
-          ),
-        ),
-      ),
-              Expanded(
-                child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: _petsStream(vet.uid),
-                  builder: (context, snap) {
-                    if (snap.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    if (snap.hasError) {
-                      return Center(
-                        child: Text('Erro ao carregar pacientes: ${snap.error}'),
-                      );
-                    }
-
-                    final docs = snap.data?.docs ?? [];
-                    final query = _searchController.text.trim().toLowerCase();
-
-                    final patients = docs.map<_Patient>((d) {
-                      final m = d.data();
-                      return _Patient(
-                        id: d.id,
-                        name: (m['name'] ?? '—').toString(),
-                        breed: (m['breed'] ?? '—').toString(),
-                        species: (m['species'] ?? '').toString(),
-                        age: _ageFrom(m['birthDate'] ?? m['age']),
-                        owner: (m['tutorName'] ?? '—').toString(),
-                        phone: (m['tutorPhone'] ??
-                            m['ownerPhone'] ??
-                            m['phone'] ??
-                            '')
-                            .toString(),
-                        status: (m['status'] ?? '').toString(),
-                        lastVisit: _fmtDate(m['lastVisit']),
-                        nextVaccine: _fmtDate(m['nextVaccine']),
-                      );
-                    }).toList();
-
-                    final filtered = patients.where((p) {
-                      if (query.isEmpty) return true;
-                      return p.name.toLowerCase().contains(query) ||
-                          p.owner.toLowerCase().contains(query) ||
-                          p.breed.toLowerCase().contains(query);
-                    }).toList();
-
-                    final total = patients.length;
-                    final healthy =
-                        patients.where((p) => p.status == 'Saudável').length;
-                    final inTreatment =
-                        patients.where((p) => p.status == 'Em Tratamento').length;
-
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              _StatBox(value: '$total', label: 'Total'),
-                              const SizedBox(width: 8),
-                              _StatBox(
-                                value: '$healthy',
-                                label: 'Saudáveis',
-                                valueColor: Colors.green,
-                              ),
-                              const SizedBox(width: 8),
-                              _StatBox(
-                                value: '$inTreatment',
-                                label: 'Tratamento',
-                                valueColor: Colors.orange,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: SizedBox(
-                                  height: 46,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          ClickVetColors.goldLight,
-                                          ClickVetColors.gold,
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                            const RegisterTutorScreen(),
-                                          ),
-                                        );
-                                      },
-                                      icon: const Icon(
-                                        Icons.groups_outlined,
-                                        color: Colors.white,
-                                      ),
-                                      label: const Text(
-                                        'Cadastrar Tutor',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                          BorderRadius.circular(16),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: SizedBox(
-                                  height: 46,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          ClickVetColors.goldLight,
-                                          ClickVetColors.gold,
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                            const RegisterPetScreen(),
-                                          ),
-                                        );
-                                      },
-                                      icon: const Icon(
-                                        Icons.pets,
-                                        color: Colors.white,
-                                      ),
-                                      label: const Text(
-                                        'Cadastrar Pet',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                          BorderRadius.circular(16),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          if (filtered.isEmpty)
-                            const _EmptyPatients()
-                          else
-                            Column(
-                              children: [
-                                for (final p in filtered) ...[
-                                  _PatientCard(patient: p),
-                                  const SizedBox(height: 12),
-                                ],
-                              ],
-                            ),
-                        ],
-                      ),
-                    );
-                  },
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Buscar pacientes...',
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: ClickVetColors.gold,
+                  ),
+                  filled: true,
+                  fillColor: ClickVetColors.bg,
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: ClickVetColors.gold,
+                      width: 1.8,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: ClickVetColors.goldDark,
+                      width: 2,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
                 ),
               ),
-            ],
+            ),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: _petsStream(vet.uid),
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snap.hasError) {
+                    return Center(
+                      child:
+                      Text('Erro ao carregar pacientes: ${snap.error}'),
+                    );
+                  }
+
+                  final docs = snap.data?.docs ?? [];
+                  final query = _searchController.text.trim().toLowerCase();
+
+                  final patients = docs.map<_Patient>((d) {
+                    final m = d.data();
+                    return _Patient(
+                      rawDoc: d,
+                      id: d.id,
+                      name: (m['name'] ?? '—').toString(),
+                      breed: (m['breed'] ?? '—').toString(),
+                      species: (m['species'] ?? '').toString(),
+                      age: _ageFrom(m['birthDate'] ?? m['age']),
+                      owner: (m['tutorName'] ?? '—').toString(),
+                      phone: (m['tutorPhone'] ??
+                          m['ownerPhone'] ??
+                          m['phone'] ??
+                          '')
+                          .toString(),
+                      status: (m['status'] ?? '').toString(),
+                      lastVisit: _fmtDate(m['lastVisit']),
+                      nextVaccine: _fmtDate(m['nextVaccine']),
+                    );
+                  }).toList();
+
+                  final filtered = patients.where((p) {
+                    if (query.isEmpty) return true;
+                    return p.name.toLowerCase().contains(query) ||
+                        p.owner.toLowerCase().contains(query) ||
+                        p.breed.toLowerCase().contains(query);
+                  }).toList();
+
+                  final total = patients.length;
+                  final healthy =
+                      patients.where((p) => p.status == 'Saudável').length;
+                  final inTreatment =
+                      patients.where((p) => p.status == 'Em Tratamento').length;
+
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            _StatBox(value: '$total', label: 'Total'),
+                            const SizedBox(width: 8),
+                            _StatBox(
+                              value: '$healthy',
+                              label: 'Saudáveis',
+                              valueColor: Colors.green,
+                            ),
+                            const SizedBox(width: 8),
+                            _StatBox(
+                              value: '$inTreatment',
+                              label: 'Tratamento',
+                              valueColor: Colors.orange,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 46,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        ClickVetColors.goldLight,
+                                        ClickVetColors.gold,
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                          const RegisterTutorScreen(),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(
+                                      Icons.groups_outlined,
+                                      color: Colors.white,
+                                    ),
+                                    label: const Text(
+                                      'Cadastrar Tutor',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                        BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: SizedBox(
+                                height: 46,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        ClickVetColors.goldLight,
+                                        ClickVetColors.gold,
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                          const RegisterPetScreen(),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(
+                                      Icons.pets,
+                                      color: Colors.white,
+                                    ),
+                                    label: const Text(
+                                      'Cadastrar Pet',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                        BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        if (filtered.isEmpty)
+                          const _EmptyPatients()
+                        else
+                          Column(
+                            children: [
+                              for (final p in filtered) ...[
+                                _PatientCard(patient: p),
+                                const SizedBox(height: 12),
+                              ],
+                            ],
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
-/// ------- MODELO -------
+
 
 class _Patient {
+  final DocumentSnapshot<Map<String, dynamic>> rawDoc;
   final String id;
   final String name;
   final String breed;
@@ -358,6 +360,7 @@ class _Patient {
   final String nextVaccine;
 
   const _Patient({
+    required this.rawDoc,
     required this.id,
     required this.name,
     required this.breed,
@@ -522,7 +525,8 @@ class _PatientCard extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding:
+                          const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -542,7 +546,8 @@ class _PatientCard extends StatelessWidget {
                           side: const BorderSide(
                               color: ClickVetColors.gold, width: 1.4),
                           foregroundColor: ClickVetColors.goldDark,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding:
+                          const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -709,51 +714,75 @@ class _PatientCard extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
+                      child: OutlinedButton(
                         onPressed: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const NewScheduleScreen(),
+                              builder: (_) => NewScheduleScreen(
+                                initialPet: patient.rawDoc,
+                              ),
                             ),
                           );
                         },
-                        icon: const Icon(Icons.calendar_today_outlined,
-                            size: 16, color: ClickVetColors.goldDark),
-                        label: const Text('Agendar',
-                            style:
-                            TextStyle(color: ClickVetColors.goldDark)),
                         style: OutlinedButton.styleFrom(
-                          side:
-                          const BorderSide(color: ClickVetColors.gold),
+                          side: const BorderSide(color: ClickVetColors.gold),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 8),
+                            horizontal: 8,
+                            vertical: 10,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(
+                              Icons.calendar_today_outlined,
+                              size: 16,
+                              color: ClickVetColors.goldDark,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Agendar',
+                              style: TextStyle(
+                                color: ClickVetColors.goldDark,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
+
                     const SizedBox(width: 6),
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) =>  MedicalRecordScreen(petId: patient.id),
+                              builder: (_) =>
+                                  MedicalRecordScreen(petId: patient.id),
                             ),
                           );
                         },
                         style: OutlinedButton.styleFrom(
-                          side:
-                          const BorderSide(color: ClickVetColors.gold),
+                          side: const BorderSide(
+                              color: ClickVetColors.gold),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 8),
                         ),
-                        child: const Text('Prontuário',
-                            style:
-                            TextStyle(color: ClickVetColors.goldDark)),
+                        child: const Text(
+                          'Prontuário',
+                          style:
+                          TextStyle(color: ClickVetColors.goldDark),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -762,14 +791,18 @@ class _PatientCard extends StatelessWidget {
                       child: OutlinedButton(
                         onPressed: () => _contactTutor(context),
                         style: OutlinedButton.styleFrom(
-                          side:
-                          const BorderSide(color: ClickVetColors.gold),
+                          side: const BorderSide(
+                              color: ClickVetColors.gold),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           padding: const EdgeInsets.all(8),
                         ),
-                        child: const Icon(Icons.phone,
-                            size: 18, color: ClickVetColors.goldDark),
+                        child: const Icon(
+                          Icons.phone,
+                          size: 18,
+                          color: ClickVetColors.goldDark,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -779,19 +812,24 @@ class _PatientCard extends StatelessWidget {
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => EditPetScreen(petId: patient.id),
+                              builder: (_) =>
+                                  EditPetScreen(petId: patient.id),
                             ),
                           );
                         },
                         style: OutlinedButton.styleFrom(
-                          side:
-                          const BorderSide(color: ClickVetColors.gold),
+                          side: const BorderSide(
+                              color: ClickVetColors.gold),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           padding: const EdgeInsets.all(8),
                         ),
-                        child: const Icon(Icons.edit,
-                            size: 18, color: ClickVetColors.goldDark),
+                        child: const Icon(
+                          Icons.edit,
+                          size: 18,
+                          color: ClickVetColors.goldDark,
+                        ),
                       ),
                     ),
                   ],

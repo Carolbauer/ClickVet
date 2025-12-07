@@ -7,8 +7,14 @@ import '../widgets/vet_scaffold.dart';
 import '../widgets/app_drawer.dart';
 
 class NewScheduleScreen extends StatefulWidget {
-  const NewScheduleScreen({super.key});
+  const NewScheduleScreen({
+    super.key,
+    this.initialPet,
+  });
+
   static const routeName = '/new-schedule';
+
+  final DocumentSnapshot<Map<String, dynamic>>? initialPet;
 
   @override
   State<NewScheduleScreen> createState() => _NewScheduleScreenState();
@@ -38,6 +44,14 @@ class _NewScheduleScreenState extends State<NewScheduleScreen> {
     super.initState();
     _selectedDate = DateTime.now();
     _selectedTime = TimeOfDay.now();
+
+    if (widget.initialPet != null) {
+      _selectedPet = widget.initialPet;
+      final data = _selectedPet!.data();
+      if (data != null) {
+        _petSearchCtrl.text = (data['name'] ?? '').toString();
+      }
+    }
   }
 
   @override
@@ -142,21 +156,14 @@ class _NewScheduleScreenState extends State<NewScheduleScreen> {
     try {
       final petData = _selectedPet!.data()!;
 
-      final tutorPhone = (petData['tutorPhone'] ??
-          petData['tutor_phone'] ??
-          petData['telefoneTutor'] ??
-          petData['tutorTelefone'] ??
-          petData['phone'] ??
-          petData['telefone'] ??
-          '').toString();
-
-
       final petId = _selectedPet!.id;
       final petName = (petData['name'] ?? '').toString();
       final petBreed = (petData['breed'] ?? '').toString();
 
-      final tutorId = (petData['tutorId'] ?? petData['tutor_id'] ?? '').toString();
-      final tutorName = (petData['tutorName'] ?? petData['tutor_name'] ?? '').toString();
+      final tutorId =
+      (petData['tutorId'] ?? petData['tutor_id'] ?? '').toString();
+      final tutorName =
+      (petData['tutorName'] ?? petData['tutor_name'] ?? '').toString();
 
       final procedures = _proceduresCtrls
           .map((c) => c.text.trim())
@@ -165,7 +172,8 @@ class _NewScheduleScreenState extends State<NewScheduleScreen> {
 
       final date = _selectedDate!;
       final time = _selectedTime!;
-      final dateTime = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      final dateTime =
+      DateTime(date.year, date.month, date.day, time.hour, time.minute);
 
       final payload = {
         'petId': petId,
@@ -173,12 +181,12 @@ class _NewScheduleScreenState extends State<NewScheduleScreen> {
         'petBreed': petBreed,
         'tutorId': tutorId,
         'tutorName': tutorName,
-        'tutorPhone': tutorPhone,
         'date': Timestamp.fromDate(dateTime),
         'time': _fmtTime(time),
         'tipoConsulta': _tipoConsulta,
         'vetId': _vetId ?? vet.uid,
         'vetName': null,
+        'procedures': procedures,
         'reminder': _reminder,
         'status': 'Pendente',
         'createdAt': FieldValue.serverTimestamp(),
@@ -220,7 +228,8 @@ class _NewScheduleScreenState extends State<NewScheduleScreen> {
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: ClickVetColors.goldDark, width: 2),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      contentPadding:
+      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
     );
   }
 
@@ -230,7 +239,7 @@ class _NewScheduleScreenState extends State<NewScheduleScreen> {
     if (vet == null) {
       return const Scaffold(
         backgroundColor: ClickVetColors.bg,
-        body: Center(child: Text('Sessão expirada.')),
+        body: Center(child: Text('Sessão expirada. Faça login novamente.')),
       );
     }
 
@@ -241,7 +250,8 @@ class _NewScheduleScreenState extends State<NewScheduleScreen> {
         elevation: 0,
         title: const Text(
           'Novo Agendamento',
-          style: TextStyle(color: ClickVetColors.gold, fontWeight: FontWeight.w700),
+          style:
+          TextStyle(color: ClickVetColors.gold, fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
         leading: Builder(
@@ -252,7 +262,8 @@ class _NewScheduleScreenState extends State<NewScheduleScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ClickVetColors.goldDark),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: ClickVetColors.goldDark),
             onPressed: () => Navigator.pop(context),
           ),
         ],
@@ -266,19 +277,24 @@ class _NewScheduleScreenState extends State<NewScheduleScreen> {
             final filteredPets = docs.where((d) {
               if (_petQuery.isEmpty) return true;
               final m = d.data();
-              final petName = (m['name'] ?? '').toString().toLowerCase();
-              final tutorName = (m['tutorName'] ?? m['tutor_name'] ?? '').toString().toLowerCase();
-              return petName.contains(_petQuery) || tutorName.contains(_petQuery);
+              final petName =
+              (m['name'] ?? '').toString().toLowerCase();
+              final tutorName =
+              (m['tutorName'] ?? m['tutor_name'] ?? '')
+                  .toString()
+                  .toLowerCase();
+              return petName.contains(_petQuery) ||
+                  tutorName.contains(_petQuery);
             }).toList();
 
             return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                      TextField(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
                       controller: _petSearchCtrl,
                       focusNode: _petSearchFocus,
                       onChanged: (v) {
@@ -298,284 +314,366 @@ class _NewScheduleScreenState extends State<NewScheduleScreen> {
                     ),
 
                     if (_showPetList && _petQuery.isNotEmpty) ...[
-                const SizedBox(height: 8),
-            Container(
-            constraints: const BoxConstraints(maxHeight: 220),
-            decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: ClickVetColors.gold, width: 1.4),
-            borderRadius: BorderRadius.circular(12),
-            ),
-            child: ListView.separated(
-            shrinkWrap: true,
-            itemCount: filteredPets.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (_, i) {
-            final d = filteredPets[i];
-            final m = d.data();
-            final petName = m['name'] ?? '—';
-            final breed = m['breed'] ?? '—';
-            final tutorName = m['tutorName'] ?? m['tutor_name'] ?? '—';
+                      const SizedBox(height: 8),
+                      Container(
+                        constraints:
+                        const BoxConstraints(maxHeight: 220),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(
+                              color: ClickVetColors.gold, width: 1.4),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: filteredPets.length,
+                          separatorBuilder: (_, __) =>
+                          const Divider(height: 1),
+                          itemBuilder: (_, i) {
+                            final d = filteredPets[i];
+                            final m = d.data();
+                            final petName = m['name'] ?? '—';
+                            final breed = m['breed'] ?? '—';
+                            final tutorName =
+                                m['tutorName'] ?? m['tutor_name'] ?? '—';
 
-            return ListTile(
-            title: Text(petName),
-            subtitle: Text('$breed • Tutor: $tutorName'),
-            onTap: () {
-            setState(() {
-            _selectedPet = d;
-            _petSearchCtrl.text = petName.toString();
-            _petQuery = '';
-            _showPetList = false;
-            });
-            FocusScope.of(context).unfocus();
-            },
-            );
-            },
-            ),
-            ),
-            ],
+                            return ListTile(
+                              title: Text(petName),
+                              subtitle: Text(
+                                  '$breed • Tutor: $tutorName'),
+                              onTap: () {
+                                setState(() {
+                                  _selectedPet = d;
+                                  _petSearchCtrl.text =
+                                      petName.toString();
+                                  _petQuery = '';
+                                  _showPetList = false;
+                                });
+                                FocusScope.of(context).unfocus();
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
 
-            const SizedBox(height: 12),
-                        if (_selectedPet != null) ...[
-                          Builder(
-                            builder: (context) {
-                              final m = _selectedPet!.data()!;
-                              final tutorName = m['tutorName'] ?? m['tutor_name'] ?? '—';
+                    const SizedBox(height: 12),
+                    if (_selectedPet != null) ...[
+                      Builder(
+                        builder: (context) {
+                          final m = _selectedPet!.data()!;
+                          final tutorName =
+                              m['tutorName'] ?? m['tutor_name'] ?? '—';
 
-                              return Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  border: Border.all(color: ClickVetColors.gold, width: 1.4),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.pets, color: ClickVetColors.goldDark),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            m['name'] ?? '—',
-                                            style: const TextStyle(fontWeight: FontWeight.w700),
-                                          ),
-                                          Text(m['breed'] ?? '—'),
-                                          Text(
-                                            'Tutor: $tutorName',
-                                            style: const TextStyle(
-                                              color: Colors.black54,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(
+                                  color: ClickVetColors.gold,
+                                  width: 1.4),
+                              borderRadius:
+                              BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.pets,
+                                    color:
+                                    ClickVetColors.goldDark),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        m['name'] ?? '—',
+                                        style: const TextStyle(
+                                            fontWeight:
+                                            FontWeight.w700),
                                       ),
-                                    ),
-                                  ],
+                                      Text(m['breed'] ?? '—'),
+                                      Text(
+                                        'Tutor: $tutorName',
+                                        style: const TextStyle(
+                                          color: Colors.black54,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              );
-                            },
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: _pickDate,
+                            child: InputDecorator(
+                              decoration: _deco('Data',
+                                  icon: Icons.calendar_month),
+                              child: Text(_selectedDate != null
+                                  ? _fmtDate(_selectedDate!)
+                                  : 'Selecionar'),
+                            ),
                           ),
-                          const SizedBox(height: 16),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: InkWell(
+                            onTap: _pickTime,
+                            child: InputDecorator(
+                              decoration: _deco('Horário',
+                                  icon: Icons.access_time),
+                              child: Text(_selectedTime != null
+                                  ? _fmtTime(_selectedTime!)
+                                  : 'Selecionar'),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    DropdownButtonFormField<String>(
+                      value: _tipoConsulta,
+                      decoration: _deco('Tipo de Consulta',
+                          icon: Icons.article_outlined),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'rotina',
+                            child: Text('Consulta de Rotina')),
+                        DropdownMenuItem(
+                            value: 'vacinacao',
+                            child: Text('Vacinação')),
+                        DropdownMenuItem(
+                            value: 'emergencia',
+                            child: Text('Emergência')),
+                        DropdownMenuItem(
+                            value: 'exame',
+                            child: Text('Exame')),
+                        DropdownMenuItem(
+                            value: 'cirurgia',
+                            child: Text('Cirurgia')),
+                        DropdownMenuItem(
+                            value: 'retorno',
+                            child: Text('Retorno')),
+                      ],
+                      onChanged: (v) =>
+                          setState(() => _tipoConsulta = v),
+                      validator: (v) =>
+                      (v == null || v.isEmpty)
+                          ? 'Selecione o tipo de Atendimento'
+                          : null,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    DropdownButtonFormField<String>(
+                      value: _vetId ?? vet.uid,
+                      decoration: _deco('Veterinário',
+                          icon: Icons.person_outline),
+                      items: [
+                        DropdownMenuItem(
+                          value: vet.uid,
+                          child:
+                          const Text('Veterinário logado'),
+                        ),
+                      ],
+                      onChanged: (v) =>
+                          setState(() => _vetId = v),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(
+                            color: ClickVetColors.gold,
+                            width: 1.4),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment:
+                        CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(Icons.add_box_outlined,
+                                  color:
+                                  ClickVetColors.goldDark),
+                              SizedBox(width: 8),
+                              Text(
+                                'Procedimentos',
+                                style: TextStyle(
+                                    fontWeight:
+                                    FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          for (int i = 0;
+                          i < _proceduresCtrls.length;
+                          i++) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller:
+                                    _proceduresCtrls[i],
+                                    decoration: _deco(
+                                        'Procedimento ${i + 1}'),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                IconButton(
+                                  onPressed: () =>
+                                      _removeProcedure(i),
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.redAccent,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+
+                          OutlinedButton.icon(
+                            onPressed: _addProcedure,
+                            icon: const Icon(Icons.add,
+                                color:
+                                ClickVetColors.goldDark),
+                            label: const Text(
+                              'Adicionar Procedimento',
+                              style: TextStyle(
+                                  color:
+                                  ClickVetColors.goldDark),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(
+                                  color: ClickVetColors.gold),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
                         ],
+                      ),
+                    ),
 
-            Row(
-            children: [
-            Expanded(
-            child: InkWell(
-            onTap: _pickDate,
-            child: InputDecorator(
-            decoration: _deco('Data', icon: Icons.calendar_month),
-            child: Text(_selectedDate != null
-            ? _fmtDate(_selectedDate!)
-                : 'Selecionar'),
-            ),
-            ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-            child: InkWell(
-            onTap: _pickTime,
-            child: InputDecorator(
-            decoration: _deco('Horário', icon: Icons.access_time),
-            child: Text(_selectedTime != null
-            ? _fmtTime(_selectedTime!)
-                : 'Selecionar'),
-            ),
-            ),
-            ),
-            ],
-            ),
+                    const SizedBox(height: 16),
 
-            const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(
+                            color: ClickVetColors.gold,
+                            width: 1.4),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: _reminder,
+                            onChanged: (v) => setState(
+                                    () => _reminder = v ?? false),
+                            activeColor: ClickVetColors.gold,
+                          ),
+                          const Expanded(
+                            child: Text(
+                                'Lembrete por SMS/WhatsApp'),
+                          )
+                        ],
+                      ),
+                    ),
 
-            DropdownButtonFormField<String>(
-            value: _tipoConsulta,
-            decoration: _deco('Tipo de Consulta', icon: Icons.article_outlined),
-            items: const [
-            DropdownMenuItem(value: 'rotina', child: Text('Consulta de Rotina')),
-            DropdownMenuItem(value: 'vacinacao', child: Text('Vacinação')),
-            DropdownMenuItem(value: 'emergencia', child: Text('Emergência')),
-            DropdownMenuItem(value: 'exame', child: Text('Exame')),
-            DropdownMenuItem(value: 'cirurgia', child: Text('Cirurgia')),
-            DropdownMenuItem(value: 'retorno', child: Text('Retorno')),
-            ],
-            onChanged: (v) => setState(() => _tipoConsulta = v),
-            validator: (v) => (v == null || v.isEmpty)
-            ? 'Selecione o tipo de Atendimento'
-                : null,
-            ),
+                    const SizedBox(height: 20),
 
-            const SizedBox(height: 16),
-
-            DropdownButtonFormField<String>(
-            value: _vetId ?? vet.uid,
-            decoration: _deco('Veterinário', icon: Icons.person_outline),
-            items: [
-            DropdownMenuItem(
-            value: vet.uid,
-            child: const Text('Veterinário logado'),
-            ),
-            ],
-            onChanged: (v) => setState(() => _vetId = v),
-            ),
-
-            const SizedBox(height: 16),
-
-            Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: ClickVetColors.gold, width: 1.4),
-            borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-            Row(
-            children: const [
-            Icon(Icons.add_box_outlined, color: ClickVetColors.goldDark),
-            SizedBox(width: 8),
-            Text('Procedimentos',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-            ],
-            ),
-            const SizedBox(height: 8),
-
-            for (int i = 0; i < _proceduresCtrls.length; i++) ...[
-            Row(
-            children: [
-            Expanded(
-            child: TextFormField(
-            controller: _proceduresCtrls[i],
-            decoration: _deco('Procedimento ${i + 1}'),
-            ),
-            ),
-            const SizedBox(width: 6),
-            IconButton(
-            onPressed: () => _removeProcedure(i),
-            icon: const Icon(Icons.delete_outline,
-            color: Colors.redAccent),
-            ),
-            ],
-            ),
-            const SizedBox(height: 8),
-            ],
-
-            OutlinedButton.icon(
-            onPressed: _addProcedure,
-            icon: const Icon(Icons.add, color: ClickVetColors.goldDark),
-            label: const Text('Adicionar Procedimento',
-            style: TextStyle(color: ClickVetColors.goldDark)),
-            style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: ClickVetColors.gold),
-            shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            ),
-            ),
-            ),
-            ],
-            ),
-            ),
-
-            const SizedBox(height: 16),
-
-            Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: ClickVetColors.gold, width: 1.4),
-            borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-            children: [
-            Checkbox(
-            value: _reminder,
-            onChanged: (v) => setState(() => _reminder = v ?? false),
-            activeColor: ClickVetColors.gold,
-            ),
-            const Expanded(
-            child: Text('Lembrete por SMS/WhatsApp'),
-            )
-            ],
-            ),
-            ),
-
-            const SizedBox(height: 20),
-
-            Row(
-            children: [
-            Expanded(
-            child: OutlinedButton(
-            onPressed: _isSaving ? null : () => Navigator.pop(context),
-            style: OutlinedButton.styleFrom(
-              backgroundColor: ClickVetColors.white,
-            side: const BorderSide(color: ClickVetColors.gold),
-            shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            ),
-            minimumSize: const Size.fromHeight(52),
-            ),
-            child: const Text(
-            'Cancelar',
-            style: TextStyle(color: ClickVetColors.goldDark),
-            ),
-            ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-            child: ElevatedButton(
-            onPressed: _isSaving ? null : _save,
-            style: ElevatedButton.styleFrom(
-            backgroundColor: ClickVetColors.gold,
-            shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            ),
-            minimumSize: const Size.fromHeight(52),
-            ),
-            child: _isSaving
-            ? const SizedBox(
-            width: 22, height: 22,
-            child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-            )
-                : const Text(
-            'Agendar',
-            style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-            ),
-            ),
-            ),
-            ),
-            ],
-            ),
-            ],
-            ),
-            ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _isSaving
+                                ? null
+                                : () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor:
+                              ClickVetColors.white,
+                              side: const BorderSide(
+                                  color: ClickVetColors.gold),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                BorderRadius.circular(12),
+                              ),
+                              minimumSize:
+                              const Size.fromHeight(52),
+                            ),
+                            child: const Text(
+                              'Cancelar',
+                              style: TextStyle(
+                                  color:
+                                  ClickVetColors.goldDark),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed:
+                            _isSaving ? null : _save,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                              ClickVetColors.gold,
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                BorderRadius.circular(12),
+                              ),
+                              minimumSize:
+                              const Size.fromHeight(52),
+                            ),
+                            child: _isSaving
+                                ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child:
+                              CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                AlwaysStoppedAnimation<
+                                    Color>(Colors
+                                    .white),
+                              ),
+                            )
+                                : const Text(
+                              'Agendar',
+                              style: TextStyle(
+                                fontWeight:
+                                FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             );
           },
         ),
