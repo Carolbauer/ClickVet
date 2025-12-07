@@ -1,3 +1,4 @@
+import 'package:app/screens/financial_reports_screen.dart';
 import 'package:app/screens/financial_transactions_screen.dart';
 import 'package:app/screens/inventory_screen.dart';
 import 'package:app/screens/product_services_screen.dart';
@@ -284,10 +285,14 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                     child: _QuickActionButton(
                       icon: Icons.bar_chart_outlined,
                       label: 'Relatórios',
-                      onPressed: () => _showSoon(
-                        context,
-                        'Navegar para relatórios financeiros',
-                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                            const FinancialReportsScreen(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
