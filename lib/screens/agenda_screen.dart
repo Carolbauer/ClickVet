@@ -1,4 +1,3 @@
-
 import 'package:app/screens/medical_record_screen.dart';
 import 'package:app/screens/new_evolution_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:app/theme/clickvet_colors.dart';
 import 'package:app/widgets/vet_scaffold.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../widgets/app_drawer.dart';
 
 class AgendaScreen extends StatefulWidget {
@@ -24,7 +24,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
     });
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> _appointmentsStream(String vetUid) {
+  Stream<QuerySnapshot<Map<String, dynamic>>> _appointmentsStream(
+      String vetUid) {
     return FirebaseFirestore.instance
         .collection('users')
         .doc(vetUid)
@@ -32,6 +33,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
         .orderBy('date')
         .snapshots();
   }
+
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
@@ -136,7 +138,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
           petId: appointment.petId,
           petName: appointment.petName,
           petBreed: appointment.breed,
-          tutorName: appointment.owner
+          tutorName: appointment.owner,
         ),
       ),
     );
@@ -159,7 +161,6 @@ class _AgendaScreenState extends State<AgendaScreen> {
       }
     }
   }
-
 
   Future<void> _deleteAppointment(_Appointment appointment) async {
     final confirmed = await showDialog<bool>(
@@ -203,25 +204,232 @@ class _AgendaScreenState extends State<AgendaScreen> {
     }
   }
 
-  void _editAppointment(_Appointment appointment) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edição da consulta de ${appointment.petName} em breve.'),
-      ),
+  void _editAppointment(_Appointment appointment) async {
+    final vet = FirebaseAuth.instance.currentUser;
+    if (vet == null) return;
+
+    const tiposPermitidos = [
+      'Consulta de Rotina',
+      'Emergência',
+      'Cirurgia',
+      'Vacinação',
+      'Exame',
+    ];
+
+    final dateController = TextEditingController(
+      text:
+      '${appointment.date.day.toString().padLeft(2, '0')}/${appointment.date.month.toString().padLeft(2, '0')}/${appointment.date.year}',
     );
+    final timeController = TextEditingController(
+      text: appointment.time,
+    );
+
+    String _normalizarTipo(String raw) {
+      final r = raw.toLowerCase();
+
+      if (r.contains('rotina')) return 'Consulta de Rotina';
+      if (r.contains('emerg')) return 'Emergência';
+      if (r.contains('cirurg')) return 'Cirurgia';
+      if (r.contains('vacin')) return 'Vacinação';
+      if (r.contains('exame')) return 'Exame';
+
+      return '';
+    }
+
+    String tipoConsulta = _normalizarTipo(appointment.type);
+    if (!tiposPermitidos.contains(tipoConsulta)) {
+      tipoConsulta = '';
+    }
+
+    Future<void> pickDate(BuildContext ctx) async {
+      DateTime initial = appointment.date;
+
+      final picked = await showDatePicker(
+        context: ctx,
+        firstDate: DateTime(2000),
+        lastDate: DateTime(2100),
+        initialDate: initial,
+      );
+
+      if (picked != null) {
+        dateController.text =
+        '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+      }
+    }
+
+    Future<void> pickTime(BuildContext ctx) async {
+      final now = TimeOfDay.now();
+      final picked = await showTimePicker(
+        context: ctx,
+        initialTime: now,
+        initialEntryMode: TimePickerEntryMode.input,
+        builder: (ctx2, child) {
+          return MediaQuery(
+            data: MediaQuery.of(ctx2!).copyWith(alwaysUse24HourFormat: true),
+            child: child!,
+          );
+        },
+      );
+
+      if (picked != null) {
+        timeController.text =
+        '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      }
+    }
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          title: const Text('Editar consulta'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: dateController,
+                  readOnly: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Data',
+                  ),
+                  onTap: () => pickDate(dialogCtx),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: timeController,
+                  readOnly: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Horário',
+                  ),
+                  onTap: () => pickTime(dialogCtx),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: tipoConsulta.isEmpty ? null : tipoConsulta,
+                  decoration: const InputDecoration(
+                    labelText: 'Tipo de consulta',
+                  ),
+                  items: tiposPermitidos
+                      .map(
+                        (t) => DropdownMenuItem(
+                      value: t,
+                      child: Text(t),
+                    ),
+                  )
+                      .toList(),
+                  onChanged: (val) {
+                    tipoConsulta = val ?? '';
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(true),
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (saved == true) {
+      try {
+        final parts = dateController.text.split('/');
+        if (parts.length != 3) {
+          throw 'Data inválida';
+        }
+        final day = int.parse(parts[0]);
+        final month = int.parse(parts[1]);
+        final year = int.parse(parts[2]);
+
+        int hour = 0;
+        int minute = 0;
+        if (timeController.text.contains(':')) {
+          final tp = timeController.text.split(':');
+          hour = int.tryParse(tp[0]) ?? 0;
+          minute = int.tryParse(tp[1]) ?? 0;
+        }
+
+        final newDate = DateTime(year, month, day, hour, minute);
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(vet.uid)
+            .collection('appointments')
+            .doc(appointment.id)
+            .update({
+          'date': Timestamp.fromDate(newDate),
+          'time': timeController.text.trim(),
+          'tipoConsulta': tipoConsulta,
+        });
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Consulta atualizada com sucesso!'),
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao atualizar consulta: $e'),
+          ),
+        );
+      }
+    }
   }
 
-  void _contactOwner(_Appointment appointment) {
-    // Depois usar url_launcher para abrir WhatsApp.
-    final phone = appointment.ownerPhone.isEmpty
-        ? 'Telefone não cadastrado'
-        : appointment.ownerPhone;
+  void _contactOwner(_Appointment appointment) async {
+    var raw = appointment.ownerPhone.replaceAll(RegExp(r'\D'), '');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Contato do tutor: $phone'),
-      ),
-    );
+    if (raw.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Telefone do tutor não cadastrado.'),
+        ),
+      );
+      return;
+    }
+
+    if (!raw.startsWith('55')) {
+      raw = '55$raw';
+    }
+
+    final uri = Uri.parse('https://wa.me/$raw');
+
+    try {
+      final can = await canLaunchUrl(uri);
+      if (can) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        final telUri = Uri.parse('tel:$raw');
+        if (await canLaunchUrl(telUri)) {
+          await launchUrl(telUri, mode: LaunchMode.externalApplication);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Não foi possível abrir WhatsApp ou telefone.'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao abrir contato: $e'),
+        ),
+      );
+    }
   }
 
   AppointmentStatus _parseStatus(String? s) {
@@ -346,7 +554,15 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       petId: (m['petId'] ?? '').toString(),
                       breed: (m['petBreed'] ?? '—').toString(),
                       owner: (m['tutorName'] ?? '—').toString(),
-                      ownerPhone: (m['tutorPhone'] ?? m['ownerPhone'] ?? '').toString(),
+                      ownerPhone: (m['tutorPhone'] ??
+                          m['tutorTelefone'] ??
+                          m['telefoneTutor'] ??
+                          m['phone'] ??
+                          m['telefone'] ??
+                          m['tel'] ??
+                          m['ownerPhone'] ??
+                          '')
+                          .toString(),
                       status: _parseStatus(m['status']?.toString()),
                       type: (m['tipoConsulta'] ?? '—').toString(),
                     );
@@ -596,9 +812,11 @@ class _AppointmentCard extends StatelessWidget {
                       ElevatedButton.icon(
                         onPressed: () => onConfirm(appointment),
                         icon: const Icon(Icons.play_arrow, size: 16),
-                        label: Text(status == AppointmentStatus.pending
-                            ? 'Confirmar e Atender'
-                            : 'Retomar Atendimento',),
+                        label: Text(
+                          status == AppointmentStatus.pending
+                              ? 'Confirmar e Atender'
+                              : 'Retomar Atendimento',
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,

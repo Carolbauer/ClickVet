@@ -142,6 +142,15 @@ class _NewScheduleScreenState extends State<NewScheduleScreen> {
     try {
       final petData = _selectedPet!.data()!;
 
+      final tutorPhone = (petData['tutorPhone'] ??
+          petData['tutor_phone'] ??
+          petData['telefoneTutor'] ??
+          petData['tutorTelefone'] ??
+          petData['phone'] ??
+          petData['telefone'] ??
+          '').toString();
+
+
       final petId = _selectedPet!.id;
       final petName = (petData['name'] ?? '').toString();
       final petBreed = (petData['breed'] ?? '').toString();
@@ -164,12 +173,12 @@ class _NewScheduleScreenState extends State<NewScheduleScreen> {
         'petBreed': petBreed,
         'tutorId': tutorId,
         'tutorName': tutorName,
+        'tutorPhone': tutorPhone,
         'date': Timestamp.fromDate(dateTime),
         'time': _fmtTime(time),
         'tipoConsulta': _tipoConsulta,
         'vetId': _vetId ?? vet.uid,
-        'vetName': null, // opcional, se quiser gravar o nome do vet logado
-        'procedures': procedures,
+        'vetName': null,
         'reminder': _reminder,
         'status': 'Pendente',
         'createdAt': FieldValue.serverTimestamp(),
