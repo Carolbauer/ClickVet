@@ -480,7 +480,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
               Icons.arrow_back_ios_new_rounded,
               color: ClickVetColors.goldDark,
             ),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ],
       ),

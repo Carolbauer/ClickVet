@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 enum DrawerItemKey {
   home,
   agenda,
-  newAppointment,
   patients,
   tutors,
   petRegister,
   profile,
-  settings, newSchedule, financial,
+  settings,
+  newSchedule,
+  financial,
 }
 
 class AppDrawer extends StatelessWidget {
@@ -111,13 +112,7 @@ class AppDrawer extends StatelessWidget {
                   label: 'Agenda',
                   onTap: onAgenda,
                 ),
-                _item(
-                  context,
-                  keyItem: DrawerItemKey.newAppointment,
-                  icon: Icons.add_circle_outline,
-                  label: 'Novo Agendamento',
-                  onTap: onNewSChedule,
-                ),
+
                 _item(
                   context,
                   keyItem: DrawerItemKey.petRegister,
@@ -138,13 +133,6 @@ class AppDrawer extends StatelessWidget {
                   icon: Icons.person_2_rounded,
                   label: 'Tutores',
                   onTap: onTutorPatients,
-                ),
-                _item(
-                  context,
-                  keyItem: DrawerItemKey.tutors,
-                  icon: Icons.book_online_outlined,
-                  label: 'Prontuário',
-                  onTap: onMedicalRecord,
                 ),
                 _item(
                   context,
@@ -200,7 +188,6 @@ class AppDrawer extends StatelessWidget {
       tileColor: isSelected ? kCvPrimary.withOpacity(0.10) : null,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       onTap: () {
-        Navigator.of(context).pop();
         onTap?.call();
       },
     );

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:app/theme/clickvet_colors.dart';
 
-// 👇 imports para gerar e visualizar PDF
+// Firestore + Auth
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+// PDF
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
@@ -16,40 +20,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
   DateTime _startDate = DateTime(2024, 1, 1);
   DateTime _endDate = DateTime(2024, 1, 31);
 
-  // --- DADOS MOCKADOS (igual ao React) ---
-  final double _totalRevenue = 45750.00;
-  final double _totalExpenses = 18230.00;
-
-  List<_RevenueCategory> get _revenueByCategory => const [
-    _RevenueCategory('Consultas', 18500.00, 40.4),
-    _RevenueCategory('Procedimentos', 15200.00, 33.2),
-    _RevenueCategory('Vacinas', 6800.00, 14.9),
-    _RevenueCategory('Produtos', 3250.00, 7.1),
-    _RevenueCategory('Serviços', 2000.00, 4.4),
-  ];
-
-  List<_ExpenseCategory> get _expensesByCategory => const [
-    _ExpenseCategory('Estoque', 8900.00, 48.8),
-    _ExpenseCategory('Despesas Fixas', 5500.00, 30.2),
-    _ExpenseCategory('Fornecedores', 2830.00, 15.5),
-    _ExpenseCategory('Outros', 1000.00, 5.5),
-  ];
-
-  List<_TopService> get _topServices => const [
-    _TopService('Consulta de Rotina', 123, 18500.00),
-    _TopService('Cirurgias', 12, 14400.00),
-    _TopService('Vacinação V10', 85, 6800.00),
-    _TopService('Banho e Tosa', 67, 8040.00),
-  ];
-
-  List<_PaymentMethod> get _paymentMethods => const [
-    _PaymentMethod('PIX', 18500.00, 40.4),
-    _PaymentMethod('Cartão de Crédito', 15200.00, 33.2),
-    _PaymentMethod('Dinheiro', 8050.00, 17.6),
-    _PaymentMethod('Cartão de Débito', 4000.00, 8.8),
-  ];
-
-  double get _netProfit => _totalRevenue - _totalExpenses;
+  // Dados calculados a partir do Firestore
+  _FinancialReportData? _reportData;
+  bool _isLoading = false;
 
   String _formatDate(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
@@ -101,17 +74,175 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
     }
   }
 
-  void _generateReport() {
-    // Aqui depois você pode filtrar dados reais.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Relatório gerado para o período selecionado.'),
-      ),
+  /// Busca dados REAIS no Firestore
+  ///
+  /// 👉 Ajusta aqui se a tua estrutura for diferente:
+  /// collection: users/{uid}/financial_entries
+  /// campos esperados por lançamento:
+  /// - amount (Number)
+  /// - type: 'revenue' ou 'expense'
+  /// - category (String)
+  /// - serviceName (String opcional)
+  /// - paymentMethod (String opcional)
+  /// - date (Timestamp)
+  Future<_FinancialReportData> _fetchReportData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('Usuário não autenticado.');
+    }
+
+    final start = DateTime(_startDate.year, _startDate.month, _startDate.day);
+    final end =
+    DateTime(_endDate.year, _endDate.month, _endDate.day, 23, 59, 59);
+
+    final snap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('financial_entries')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
+        .get();
+
+    final entries = snap.docs.map((d) {
+      final m = d.data();
+      final amountRaw = m['amount'] ?? 0;
+      final double amount = amountRaw is int
+          ? amountRaw.toDouble()
+          : (amountRaw is double ? amountRaw : 0.0);
+
+      return _FinancialEntry(
+        amount: amount,
+        type: (m['type'] ?? 'revenue').toString(), // 'revenue' ou 'expense'
+        category: (m['category'] ?? 'Outros').toString(),
+        serviceName: (m['serviceName'] ?? '').toString(),
+        paymentMethod: (m['paymentMethod'] ?? '').toString(),
+        date: (m['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      );
+    }).toList();
+
+    double totalRevenue = 0;
+    double totalExpenses = 0;
+
+    final Map<String, double> revenueByCat = {};
+    final Map<String, double> expensesByCat = {};
+    final Map<String, _ServiceAgg> servicesAgg = {};
+    final Map<String, double> paymentAgg = {};
+
+    for (final e in entries) {
+      if (e.type == 'expense') {
+        totalExpenses += e.amount;
+        expensesByCat[e.category] =
+            (expensesByCat[e.category] ?? 0) + e.amount;
+      } else {
+        totalRevenue += e.amount;
+        revenueByCat[e.category] =
+            (revenueByCat[e.category] ?? 0) + e.amount;
+
+        if (e.serviceName != null && e.serviceName!.isNotEmpty) {
+          final current =
+              servicesAgg[e.serviceName!] ?? _ServiceAgg(count: 0, total: 0);
+          servicesAgg[e.serviceName!] = _ServiceAgg(
+            count: current.count + 1,
+            total: current.total + e.amount,
+          );
+        }
+
+        if (e.paymentMethod != null && e.paymentMethod!.isNotEmpty) {
+          paymentAgg[e.paymentMethod!] =
+              (paymentAgg[e.paymentMethod!] ?? 0) + e.amount;
+        }
+      }
+    }
+
+    final netProfit = totalRevenue - totalExpenses;
+
+    final revenueList = revenueByCat.entries
+        .map((e) => _RevenueCategory(
+      e.key,
+      e.value,
+      totalRevenue > 0 ? (e.value / totalRevenue) * 100 : 0,
+    ))
+        .toList()
+      ..sort((a, b) => b.amount.compareTo(a.amount));
+
+    final expensesList = expensesByCat.entries
+        .map((e) => _ExpenseCategory(
+      e.key,
+      e.value,
+      totalExpenses > 0 ? (e.value / totalExpenses) * 100 : 0,
+    ))
+        .toList()
+      ..sort((a, b) => b.amount.compareTo(a.amount));
+
+    final topServicesList = servicesAgg.entries
+        .map((e) => _TopService(e.key, e.value.count, e.value.total))
+        .toList()
+      ..sort((a, b) => b.amount.compareTo(a.amount));
+
+    final paymentMethodsList = paymentAgg.entries
+        .map((e) => _PaymentMethod(
+      e.key,
+      e.value,
+      totalRevenue > 0 ? (e.value / totalRevenue) * 100 : 0,
+    ))
+        .toList()
+      ..sort((a, b) => b.amount.compareTo(a.amount));
+
+    return _FinancialReportData(
+      totalRevenue: totalRevenue,
+      totalExpenses: totalExpenses,
+      netProfit: netProfit,
+      revenueByCategory: revenueList,
+      expensesByCategory: expensesList,
+      topServices: topServicesList,
+      paymentMethods: paymentMethodsList,
+      totalEntries: entries.length,
     );
   }
 
-  // 👇 Geração REAL de PDF (abre o compartilhamento/visualização)
+  Future<void> _generateReport() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await _fetchReportData();
+      if (!mounted) return;
+      setState(() => _reportData = data);
+
+      if (data.totalEntries == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não há lançamentos no período selecionado.'),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Relatório atualizado com dados reais.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao carregar dados: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // PDF usando _reportData
   Future<void> _exportPdf() async {
+    if (_reportData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gere o relatório antes de exportar o PDF.'),
+        ),
+      );
+      return;
+    }
+
+    final data = _reportData!;
+
     try {
       final doc = pw.Document();
 
@@ -148,9 +279,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
               pw.Table.fromTextArray(
                 headers: ['Descrição', 'Valor'],
                 data: [
-                  ['Faturamento', _formatMoney(_totalRevenue)],
-                  ['Despesas', _formatMoney(_totalExpenses)],
-                  ['Lucro Líquido', _formatMoney(_netProfit)],
+                  ['Faturamento', _formatMoney(data.totalRevenue)],
+                  ['Despesas', _formatMoney(data.totalExpenses)],
+                  ['Lucro Líquido', _formatMoney(data.netProfit)],
                 ],
                 headerStyle: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
@@ -170,7 +301,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
               pw.SizedBox(height: 8),
               pw.Table.fromTextArray(
                 headers: ['Categoria', 'Valor', '%'],
-                data: _revenueByCategory
+                data: data.revenueByCategory
                     .map((r) => [
                   r.category,
                   _formatMoney(r.amount),
@@ -195,7 +326,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
               pw.SizedBox(height: 8),
               pw.Table.fromTextArray(
                 headers: ['Categoria', 'Valor', '%'],
-                data: _expensesByCategory
+                data: data.expensesByCategory
                     .map((e) => [
                   e.category,
                   _formatMoney(e.amount),
@@ -220,7 +351,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
               pw.SizedBox(height: 8),
               pw.Table.fromTextArray(
                 headers: ['Serviço', 'Qtd', 'Total'],
-                data: _topServices
+                data: data.topServices
                     .map((s) => [
                   s.name,
                   s.count.toString(),
@@ -245,7 +376,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
               pw.SizedBox(height: 8),
               pw.Table.fromTextArray(
                 headers: ['Forma', 'Valor', '%'],
-                data: _paymentMethods
+                data: data.paymentMethods
                     .map((m) => [
                   m.method,
                   _formatMoney(m.amount),
@@ -262,7 +393,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
         ),
       );
 
-      // Abre o diálogo de impressão/compartilhamento no emulador/celular
       await Printing.layoutPdf(
         onLayout: (format) async => doc.save(),
       );
@@ -274,10 +404,10 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
+    final data = _reportData;
+
     return Scaffold(
       backgroundColor: ClickVetColors.bg,
       appBar: AppBar(
@@ -300,7 +430,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            // 👇 ícone no canto superior direito também exporta o PDF
+            // ícone no canto superior direito também exporta o PDF
             onPressed: _exportPdf,
             icon: const Icon(
               Icons.file_download,
@@ -349,11 +479,20 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: ElevatedButton.icon(
-                  onPressed: _generateReport,
-                  icon: const Icon(Icons.calendar_month, color: Colors.white),
-                  label: const Text(
-                    'Gerar Relatório',
-                    style: TextStyle(
+                  onPressed: _isLoading ? null : _generateReport,
+                  icon: _isLoading
+                      ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  )
+                      : const Icon(Icons.calendar_month, color: Colors.white),
+                  label: Text(
+                    _isLoading ? 'Carregando...' : 'Gerar Relatório',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
                     ),
@@ -409,7 +548,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _formatMoney(_totalRevenue),
+                    _formatMoney(data?.totalRevenue ?? 0),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 24,
@@ -460,7 +599,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          _formatMoney(_totalExpenses),
+                          _formatMoney(data?.totalExpenses ?? 0),
                           style: const TextStyle(
                             fontSize: 18,
                             color: Colors.redAccent,
@@ -499,7 +638,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          _formatMoney(_netProfit),
+                          _formatMoney(data?.netProfit ?? 0),
                           style: const TextStyle(
                             fontSize: 18,
                             color: Colors.green,
@@ -520,7 +659,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
               title: 'Receitas por Categoria',
               icon: Icons.pie_chart_outline,
               child: Column(
-                children: _revenueByCategory
+                children:
+                (data?.revenueByCategory ?? const <_RevenueCategory>[])
                     .map(
                       (item) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
@@ -544,7 +684,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
               title: 'Despesas por Categoria',
               icon: Icons.pie_chart_outline,
               child: Column(
-                children: _expensesByCategory
+                children:
+                (data?.expensesByCategory ?? const <_ExpenseCategory>[])
                     .map(
                       (item) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
@@ -567,7 +708,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
             _SectionCard(
               title: 'Serviços Mais Realizados',
               child: Column(
-                children: _topServices
+                children: (data?.topServices ?? const <_TopService>[])
                     .map(
                       (s) => Container(
                     margin: const EdgeInsets.only(bottom: 8),
@@ -613,7 +754,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${_formatMoney(s.amount / s.count)} /un',
+                              s.count > 0
+                                  ? '${_formatMoney(s.amount / s.count)} /un'
+                                  : '—',
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: Colors.black45,
@@ -635,7 +778,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
             _SectionCard(
               title: 'Formas de Pagamento',
               child: Column(
-                children: _paymentMethods
+                children:
+                (data?.paymentMethods ?? const <_PaymentMethod>[])
                     .map(
                       (m) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
@@ -657,43 +801,39 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
             // ---- EXPORTAR RELATÓRIO ----
             _SectionCard(
               title: 'Exportar Relatório',
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 46,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [
-                            ClickVetColors.goldLight,
-                            ClickVetColors.gold,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        ClickVetColors.goldLight,
+                        ClickVetColors.gold,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: _exportPdf,
+                    icon: const Icon(Icons.description_outlined,
+                        color: Colors.white),
+                    label: const Text(
+                      'Exportar em PDF',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
                       ),
-                      child: ElevatedButton.icon(
-                        onPressed: _exportPdf,
-                        icon: const Icon(Icons.description_outlined,
-                            color: Colors.white),
-                        label: const Text(
-                          'Exportar em PDF',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ],
@@ -703,7 +843,54 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
   }
 }
 
-// ---- MODELOS SIMPLES ----
+// ----------------- MODELOS -----------------
+
+class _FinancialEntry {
+  final double amount;
+  final String type; // 'revenue' ou 'expense'
+  final String category;
+  final String? serviceName;
+  final String? paymentMethod;
+  final DateTime date;
+
+  _FinancialEntry({
+    required this.amount,
+    required this.type,
+    required this.category,
+    this.serviceName,
+    this.paymentMethod,
+    required this.date,
+  });
+}
+
+class _FinancialReportData {
+  final double totalRevenue;
+  final double totalExpenses;
+  final double netProfit;
+  final List<_RevenueCategory> revenueByCategory;
+  final List<_ExpenseCategory> expensesByCategory;
+  final List<_TopService> topServices;
+  final List<_PaymentMethod> paymentMethods;
+  final int totalEntries;
+
+  _FinancialReportData({
+    required this.totalRevenue,
+    required this.totalExpenses,
+    required this.netProfit,
+    required this.revenueByCategory,
+    required this.expensesByCategory,
+    required this.topServices,
+    required this.paymentMethods,
+    required this.totalEntries,
+  });
+}
+
+class _ServiceAgg {
+  final int count;
+  final double total;
+
+  _ServiceAgg({required this.count, required this.total});
+}
 
 class _RevenueCategory {
   final String category;
@@ -844,6 +1031,8 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pct = percentage.isNaN ? 0.0 : percentage;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -873,7 +1062,7 @@ class _CategoryRow extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
-              value: (percentage.clamp(0, 100)) / 100,
+              value: (pct.clamp(0, 100)) / 100,
               backgroundColor: Colors.grey.shade300,
               valueColor: AlwaysStoppedAnimation<Color>(barColor),
             ),
@@ -881,7 +1070,7 @@ class _CategoryRow extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          '${percentage.toStringAsFixed(1)}%',
+          '${pct.toStringAsFixed(1)}%',
           style: const TextStyle(
             fontSize: 11,
             color: Colors.black45,

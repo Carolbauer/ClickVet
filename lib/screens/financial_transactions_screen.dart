@@ -1,5 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
+// Firestore + Auth
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 enum TransactionType { all, entrada, saida }
 
@@ -39,88 +45,66 @@ class _FinancialTransactionsScreenState
   final TextEditingController _searchController = TextEditingController();
   TransactionType _filterType = TransactionType.all;
 
-  final List<TransactionModel> _transactions = [
-    TransactionModel(
-      type: TransactionType.entrada,
-      description: 'Consulta - Rex',
-      amount: 150.00,
-      date: DateTime(2024, 1, 28),
-      category: 'Consulta',
-      paymentMethod: 'Cartão',
-    ),
-    TransactionModel(
-      type: TransactionType.saida,
-      description: 'Compra Vacinas',
-      amount: 890.00,
-      date: DateTime(2024, 1, 27),
-      category: 'Estoque',
-      paymentMethod: 'Transferência',
-    ),
-    TransactionModel(
-      type: TransactionType.entrada,
-      description: 'Cirurgia - Luna',
-      amount: 1200.00,
-      date: DateTime(2024, 1, 27),
-      category: 'Procedimento',
-      paymentMethod: 'PIX',
-    ),
-    TransactionModel(
-      type: TransactionType.entrada,
-      description: 'Vacina V10 - Thor',
-      amount: 80.00,
-      date: DateTime(2024, 1, 26),
-      category: 'Vacina',
-      paymentMethod: 'Dinheiro',
-    ),
-    TransactionModel(
-      type: TransactionType.saida,
-      description: 'Fornecedor Medicamentos',
-      amount: 650.00,
-      date: DateTime(2024, 1, 25),
-      category: 'Estoque',
-      paymentMethod: 'Boleto',
-    ),
-    TransactionModel(
-      type: TransactionType.entrada,
-      description: 'Banho e Tosa - Fred',
-      amount: 120.00,
-      date: DateTime(2024, 1, 25),
-      category: 'Serviço',
-      paymentMethod: 'Cartão',
-    ),
-    TransactionModel(
-      type: TransactionType.saida,
-      description: 'Aluguel Clínica',
-      amount: 3500.00,
-      date: DateTime(2024, 1, 24),
-      category: 'Fixo',
-      paymentMethod: 'Transferência',
-    ),
-    TransactionModel(
-      type: TransactionType.entrada,
-      description: 'Consulta - Maia',
-      amount: 150.00,
-      date: DateTime(2024, 1, 24),
-      category: 'Consulta',
-      paymentMethod: 'PIX',
-    ),
-    TransactionModel(
-      type: TransactionType.saida,
-      description: 'Conta de Luz',
-      amount: 450.00,
-      date: DateTime(2024, 1, 23),
-      category: 'Fixo',
-      paymentMethod: 'Débito Automático',
-    ),
-    TransactionModel(
-      type: TransactionType.entrada,
-      description: 'Venda Ração Premium',
-      amount: 280.00,
-      date: DateTime(2024, 1, 23),
-      category: 'Produto',
-      paymentMethod: 'Dinheiro',
-    ),
-  ];
+  // AGORA: lista mutável preenchida pelo Firestore
+  List<TransactionModel> _transactions = [];
+
+  StreamSubscription<QuerySnapshot>? _sub;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenTransactions();
+  }
+
+  void _listenTransactions() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // Você pode exibir um SnackBar avisando que precisa logar
+      return;
+    }
+
+    _sub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('financial_entries')
+        .orderBy('date', descending: true)
+        .snapshots()
+        .listen((snap) {
+      final list = snap.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+
+        final rawAmount = data['amount'];
+        final double amount = rawAmount is int
+            ? rawAmount.toDouble()
+            : (rawAmount is num ? rawAmount.toDouble() : 0.0);
+
+        final typeStr = (data['type'] ?? 'revenue') as String;
+        final TransactionType type = (typeStr == 'expense' || typeStr == 'saida')
+            ? TransactionType.saida
+            : TransactionType.entrada;
+
+        return TransactionModel(
+          description: (data['description'] ?? '') as String,
+          amount: amount,
+          category: (data['category'] ?? 'Outros') as String,
+          paymentMethod: (data['paymentMethod'] ?? '') as String,
+          date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          type: type,
+        );
+      }).toList();
+
+      setState(() {
+        _transactions = list;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
 
   List<TransactionModel> get _filteredTransactions {
     final term = _searchController.text.toLowerCase();
@@ -160,10 +144,34 @@ class _FinancialTransactionsScreenState
           bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
         ),
         child: _NewTransactionForm(
-          onSave: (transaction) {
-            setState(() {
-              _transactions.add(transaction);
+          onSave: (transaction) async {
+            final user = FirebaseAuth.instance.currentUser;
+            if (user == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Faça login para salvar lançamentos.'),
+                ),
+              );
+              return;
+            }
+
+            final typeString =
+            transaction.type == TransactionType.entrada ? 'revenue' : 'expense';
+
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('financial_entries')
+                .add({
+              'description': transaction.description,
+              'amount': transaction.amount,
+              'category': transaction.category,
+              'paymentMethod': transaction.paymentMethod,
+              'type': typeString,
+              'date': Timestamp.fromDate(transaction.date),
+              // opcional: 'createdAt': FieldValue.serverTimestamp(),
             });
+            // O listener em _listenTransactions() atualiza a lista automaticamente
           },
         ),
       ),
@@ -256,7 +264,6 @@ class _FinancialTransactionsScreenState
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -762,7 +769,6 @@ class _NewTransactionFormState extends State<_NewTransactionForm> {
               },
             ),
             const SizedBox(height: 12),
-
             Row(
               children: [
                 Expanded(

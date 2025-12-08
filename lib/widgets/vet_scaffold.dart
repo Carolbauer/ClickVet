@@ -153,20 +153,15 @@ class _VetScaffoldState extends State<VetScaffold> {
               );
             },
 
-            onMedicalRecord: (){
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (_) => const PatientsScreen(),
-                ),
-              );
-            },
-            onFinancialDashboard: (){
-              Navigator.of(context).pushReplacement(
+            onFinancialDashboard: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => const FinancialDashboardScreen(),
                 ),
               );
             },
+
 
             onSettings: () {
               Navigator.pop(context);

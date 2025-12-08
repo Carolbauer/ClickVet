@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:app/theme/clickvet_colors.dart';
 import 'package:app/widgets/vet_scaffold.dart';
 import 'package:app/widgets/app_drawer.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FinancialDashboardScreen extends StatefulWidget {
   const FinancialDashboardScreen({super.key});
@@ -20,90 +22,12 @@ class FinancialDashboardScreen extends StatefulWidget {
 class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
   String _selectedPeriod = 'month';
 
-  // Mock de resumo financeiro
-  final _financialSummary = const _FinancialSummary(
-    totalRevenue: 45750.00,
-    totalExpenses: 18230.00,
-    netProfit: 27520.00,
-    pendingReceivables: 8900.00,
-  );
-
-  // Mock de lançamentos recentes
-  final List<_Transaction> _recentTransactions = const [
-    _Transaction(
-      id: 1,
-      type: _TransactionType.income,
-      description: 'Consulta - Rex',
-      amount: 150.00,
-      dateIso: '2024-01-28',
-      category: 'Consulta',
-    ),
-    _Transaction(
-      id: 2,
-      type: _TransactionType.expense,
-      description: 'Compra Vacinas',
-      amount: 890.00,
-      dateIso: '2024-01-27',
-      category: 'Estoque',
-    ),
-    _Transaction(
-      id: 3,
-      type: _TransactionType.income,
-      description: 'Cirurgia - Luna',
-      amount: 1200.00,
-      dateIso: '2024-01-27',
-      category: 'Procedimento',
-    ),
-    _Transaction(
-      id: 4,
-      type: _TransactionType.income,
-      description: 'Vacina - Thor',
-      amount: 80.00,
-      dateIso: '2024-01-26',
-      category: 'Vacina',
-    ),
-    _Transaction(
-      id: 5,
-      type: _TransactionType.expense,
-      description: 'Fornecedor Medicamentos',
-      amount: 650.00,
-      dateIso: '2024-01-25',
-      category: 'Estoque',
-    ),
-  ];
-
-  // Mock de itens com estoque baixo
-  final List<_LowStockItem> _lowStockItems = const [
-    _LowStockItem(
-      id: 1,
-      name: 'Vacina V10',
-      quantity: 5,
-      minStock: 10,
-      type: 'Vacina',
-    ),
-    _LowStockItem(
-      id: 2,
-      name: 'Antibiótico Amoxicilina',
-      quantity: 8,
-      minStock: 15,
-      type: 'Medicamento',
-    ),
-    _LowStockItem(
-      id: 3,
-      name: 'Ração Premium 15kg',
-      quantity: 3,
-      minStock: 10,
-      type: 'Produto',
-    ),
-  ];
-
   String _formatMoney(double v) {
-    // R$ 1.234,56
     final str = v.toStringAsFixed(2).replaceAll('.', ',');
     return 'R\$ $str';
   }
 
-  String _formatDate(String iso) {
+  String _formatDateFromIso(String iso) {
     try {
       final d = DateTime.parse(iso);
       final dd = d.day.toString().padLeft(2, '0');
@@ -115,14 +39,71 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
     }
   }
 
-  void _showSoon(BuildContext context, String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
-    );
+  String _formatDate(DateTime d) {
+    final dd = d.day.toString().padLeft(2, '0');
+    final mm = d.month.toString().padLeft(2, '0');
+    final yy = d.year.toString();
+    return '$dd/$mm/$yy';
+  }
+
+  DateTime _periodStartDate() {
+    final now = DateTime.now();
+    if (_selectedPeriod == 'week') {
+      return now.subtract(const Duration(days: 7));
+    } else if (_selectedPeriod == 'year') {
+      return DateTime(now.year, 1, 1);
+    }
+    // default: mês
+    return DateTime(now.year, now.month, 1);
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return VetScaffold(
+        selectedKey: DrawerItemKey.financial,
+        appBar: AppBar(
+          backgroundColor: ClickVetColors.bg,
+          elevation: 0,
+          title: const Text(
+            'Financeiro',
+            style: TextStyle(
+              color: ClickVetColors.primary,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          centerTitle: true,
+        ),
+        body: const Center(
+          child: Text(
+            'Você precisa estar logado para visualizar o financeiro.',
+            style: TextStyle(
+              color: ClickVetColors.goldDark,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 🔹 Usa a mesma coleção da tela de lançamentos
+    final transactionsStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('financial_entries')
+        .orderBy('date', descending: true)
+        .limit(50)
+        .snapshots();
+
+    final inventoryStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('inventory')
+        .snapshots();
+
     return VetScaffold(
       selectedKey: DrawerItemKey.financial,
       appBar: AppBar(
@@ -149,7 +130,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
               Icons.arrow_back_ios_new_rounded,
               color: ClickVetColors.goldDark,
             ),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(context).pop(false),
           ),
         ],
         bottom: PreferredSize(
@@ -202,220 +183,351 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _SummaryCard(
-                iconBg: const Color(0xFFE5F9EC),
-                icon: Icons.trending_up_rounded,
-                iconColor: const Color(0xFF16A34A),
-                title: 'Receitas',
-                badgeText: '+15%',
-                badgeBg: const Color(0xFFD1FAE5),
-                badgeColor: const Color(0xFF166534),
-                value: _formatMoney(_financialSummary.totalRevenue),
-              ),
-              const SizedBox(height: 10),
-              _SummaryCard(
-                iconBg: const Color(0xFFFEE2E2),
-                icon: Icons.trending_down_rounded,
-                iconColor: const Color(0xFFDC2626),
-                title: 'Despesas',
-                badgeText: '-8%',
-                badgeBg: const Color(0xFFFECACA),
-                badgeColor: const Color(0xFFB91C1C),
-                value: _formatMoney(_financialSummary.totalExpenses),
-              ),
-              const SizedBox(height: 10),
-              _ProfitCard(
-                title: 'Lucro Líquido',
-                value: _formatMoney(_financialSummary.netProfit),
-                marginPercent: (_financialSummary.netProfit /
-                    _financialSummary.totalRevenue *
-                    100)
-                    .toStringAsFixed(1),
-              ),
-              const SizedBox(height: 10),
-              _SummaryCard(
-                iconBg: const Color(0xFFFEF3C7),
-                icon: Icons.receipt_long_outlined,
-                iconColor: const Color(0xFFEAB308),
-                title: 'Contas a Receber',
-                badgeText: null,
-                badgeBg: null,
-                badgeColor: null,
-                value: _formatMoney(_financialSummary.pendingReceivables),
-              ),
+              // ================= LANÇAMENTOS / RESUMO =================
+              StreamBuilder<QuerySnapshot>(
+                stream: transactionsStream,
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const Text(
+                      'Erro ao carregar lançamentos.',
+                      style: TextStyle(color: ClickVetColors.goldDark),
+                    );
+                  }
 
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: _QuickActionButton(
-                      icon: Icons.add,
-                      label: 'Lançamento',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                            const FinancialTransactionsScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _QuickActionButton(
-                      icon: Icons.inventory_2_outlined,
-                      label: 'Estoque',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                            const InventoryScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _QuickActionButton(
-                      icon: Icons.bar_chart_outlined,
-                      label: 'Relatórios',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                            const FinancialReportsScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _QuickActionButton(
-                      icon: Icons.shopping_cart_outlined,
-                      label: 'Produtos',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                            const ProductsServicesScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 22),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Lançamentos Recentes',
-                    style: TextStyle(
-                      color: ClickVetColors.goldDark,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => _showSoon(
-                      context,
-                      'Ver todos os lançamentos',
-                    ),
-                    child: const Text(
-                      'Ver todos',
-                      style: TextStyle(
-                        color: ClickVetColors.gold,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Column(
-                children: _recentTransactions
-                    .map(
-                      (t) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: _TransactionCard(
-                      transaction: t,
-                      formatMoney: _formatMoney,
-                      formatDate: _formatDate,
-                    ),
-                  ),
-                )
-                    .toList(),
-              ),
-
-              if (_lowStockItems.isNotEmpty) ...[
-                const SizedBox(height: 22),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Estoque Baixo',
-                      style: TextStyle(
-                        color: ClickVetColors.goldDark,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => _showSoon(
-                        context,
-                        'Ver tela de estoque',
-                      ),
-                      child: const Text(
-                        'Ver estoque',
-                        style: TextStyle(
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 40),
+                        child: CircularProgressIndicator(
                           color: ClickVetColors.gold,
-                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Column(
-                  children: _lowStockItems
-                      .map(
-                        (item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: _LowStockCard(item: item),
-                    ),
-                  )
-                      .toList(),
-                ),
-              ],
+                    );
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+                  final periodStart = _periodStartDate();
+
+                  double totalRevenue = 0;
+                  double totalExpenses = 0;
+                  final List<_Transaction> recentTransactions = [];
+
+                  for (final doc in docs) {
+                    final data = doc.data() as Map<String, dynamic>? ?? {};
+
+                    final ts = data['date'] as Timestamp?;
+                    if (ts == null) continue;
+                    final d = ts.toDate();
+                    if (d.isBefore(periodStart)) continue;
+
+                    final amount =
+                        (data['amount'] as num?)?.toDouble() ?? 0.0;
+
+                    final typeStr = (data['type'] ?? 'revenue') as String;
+                    final desc =
+                    (data['description'] ?? 'Sem descrição') as String;
+                    final category =
+                    (data['category'] ?? 'Outros') as String;
+
+                    final type = (typeStr == 'expense' || typeStr == 'saida')
+                        ? _TransactionType.expense
+                        : _TransactionType.income;
+
+                    if (type == _TransactionType.income) {
+                      totalRevenue += amount;
+                    } else {
+                      totalExpenses += amount;
+                    }
+
+                    recentTransactions.add(
+                      _Transaction(
+                        id: doc.hashCode,
+                        type: type,
+                        description: desc,
+                        amount: amount,
+                        dateIso: d.toIso8601String(),
+                        category: category,
+                      ),
+                    );
+                  }
+
+                  recentTransactions.sort(
+                        (a, b) => b.dateIso.compareTo(a.dateIso),
+                  );
+                  final displayedTransactions =
+                  recentTransactions.take(5).toList();
+
+                  final netProfit = totalRevenue - totalExpenses;
+                  final marginPercent = totalRevenue > 0
+                      ? (netProfit / totalRevenue * 100).toStringAsFixed(1)
+                      : '0,0';
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SummaryCard(
+                        iconBg: const Color(0xFFE5F9EC),
+                        icon: Icons.trending_up_rounded,
+                        iconColor: const Color(0xFF16A34A),
+                        title: 'Receitas',
+                        badgeText: null, // por enquanto sem comparação %
+                        badgeBg: null,
+                        badgeColor: null,
+                        value: _formatMoney(totalRevenue),
+                      ),
+                      const SizedBox(height: 10),
+                      _SummaryCard(
+                        iconBg: const Color(0xFFFEE2E2),
+                        icon: Icons.trending_down_rounded,
+                        iconColor: const Color(0xFFDC2626),
+                        title: 'Despesas',
+                        badgeText: null,
+                        badgeBg: null,
+                        badgeColor: null,
+                        value: _formatMoney(totalExpenses),
+                      ),
+                      const SizedBox(height: 10),
+                      _ProfitCard(
+                        title: 'Lucro Líquido',
+                        value: _formatMoney(netProfit),
+                        marginPercent: marginPercent,
+                      ),
+                      const SizedBox(height: 18),
+
+                      // AÇÕES RÁPIDAS
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _QuickActionButton(
+                              icon: Icons.add,
+                              label: 'Lançamento',
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                    const FinancialTransactionsScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _QuickActionButton(
+                              icon: Icons.inventory_2_outlined,
+                              label: 'Estoque',
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const InventoryScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _QuickActionButton(
+                              icon: Icons.bar_chart_outlined,
+                              label: 'Relatórios',
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                    const FinancialReportsScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _QuickActionButton(
+                              icon: Icons.shopping_cart_outlined,
+                              label: 'Produtos',
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                    const ProductsServicesScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 22),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Lançamentos Recentes',
+                            style: TextStyle(
+                              color: ClickVetColors.goldDark,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                  const FinancialTransactionsScreen(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Ver todos',
+                              style: TextStyle(
+                                color: ClickVetColors.gold,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      if (displayedTransactions.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 12),
+                          child: Text(
+                            'Nenhum lançamento encontrado para o período selecionado.',
+                            style: TextStyle(
+                              color: Colors.black54,
+                              fontSize: 12,
+                            ),
+                          ),
+                        )
+                      else
+                        Column(
+                          children: displayedTransactions
+                              .map(
+                                (t) => Padding(
+                              padding:
+                              const EdgeInsets.only(bottom: 8.0),
+                              child: _TransactionCard(
+                                transaction: t,
+                                formatMoney: _formatMoney,
+                                formatDate: _formatDateFromIso,
+                              ),
+                            ),
+                          )
+                              .toList(),
+                        ),
+                    ],
+                  );
+                },
+              ),
+
+              // ================= ESTOQUE BAIXO =================
+              const SizedBox(height: 22),
+              StreamBuilder<QuerySnapshot>(
+                stream: inventoryStream,
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const Text(
+                      'Erro ao carregar estoque.',
+                      style: TextStyle(color: ClickVetColors.goldDark),
+                    );
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SizedBox.shrink();
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+
+                  final List<_LowStockItem> lowStockItems = docs
+                      .map((doc) {
+                    final data =
+                        doc.data() as Map<String, dynamic>? ?? {};
+                    final name =
+                    (data['name'] ?? 'Sem nome') as String;
+                    final quantity =
+                        (data['quantity'] as num?)?.toInt() ?? 0;
+                    final minStock =
+                        (data['minStock'] as num?)?.toInt() ?? 0;
+                    final type =
+                    (data['type'] ?? 'Produto') as String;
+
+                    return _LowStockItem(
+                      id: doc.hashCode,
+                      name: name,
+                      quantity: quantity,
+                      minStock: minStock,
+                      type: type,
+                    );
+                  })
+                      .where((item) => item.quantity <= item.minStock)
+                      .toList();
+
+                  if (lowStockItems.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Estoque Baixo',
+                            style: TextStyle(
+                              color: ClickVetColors.goldDark,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                  const InventoryScreen(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Ver estoque',
+                              style: TextStyle(
+                                color: ClickVetColors.gold,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Column(
+                        children: lowStockItems
+                            .map(
+                              (item) => Padding(
+                            padding:
+                            const EdgeInsets.only(bottom: 8.0),
+                            child: _LowStockCard(item: item),
+                          ),
+                        )
+                            .toList(),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ],
           ),
         ),
       ),
     );
   }
-}
-
-class _FinancialSummary {
-  final double totalRevenue;
-  final double totalExpenses;
-  final double netProfit;
-  final double pendingReceivables;
-
-  const _FinancialSummary({
-    required this.totalRevenue,
-    required this.totalExpenses,
-    required this.netProfit,
-    required this.pendingReceivables,
-  });
 }
 
 enum _TransactionType { income, expense }
@@ -428,7 +540,7 @@ class _Transaction {
   final String dateIso;
   final String category;
 
-  const _Transaction({
+  _Transaction({
     required this.id,
     required this.type,
     required this.description,
@@ -528,7 +640,8 @@ class _SummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment:
+            MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
@@ -553,8 +666,8 @@ class _SummaryCard extends StatelessWidget {
               ),
               if (badgeText != null)
                 Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: badgeBg,
                     borderRadius: BorderRadius.circular(999),
@@ -617,7 +730,7 @@ class _ProfitCard extends StatelessWidget {
               Container(
                 width: 36,
                 height: 36,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.white24,
                   shape: BoxShape.circle,
                 ),
@@ -731,7 +844,8 @@ class _TransactionCard extends StatelessWidget {
         border: Border.all(color: ClickVetColors.gold, width: 1.4),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment:
+        MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
@@ -756,7 +870,8 @@ class _TransactionCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
                 children: [
                   Text(
                     transaction.description,
@@ -777,7 +892,8 @@ class _TransactionCard extends StatelessWidget {
             ],
           ),
           Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment:
+            CrossAxisAlignment.end,
             children: [
               Text(
                 '${isIncome ? '+' : '-'} ${formatMoney(transaction.amount)}',
@@ -817,12 +933,13 @@ class _LowStockCard extends StatelessWidget {
         color: const Color(0xFFFEF9C3),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Color(0xFFEAB308),
+          color: const Color(0xFFEAB308),
           width: 1.6,
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment:
+        MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
@@ -841,7 +958,8 @@ class _LowStockCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
                 children: [
                   Text(
                     item.name,
@@ -862,7 +980,8 @@ class _LowStockCard extends StatelessWidget {
             ],
           ),
           Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment:
+            CrossAxisAlignment.end,
             children: [
               Text(
                 'Qtd: ${item.quantity}',

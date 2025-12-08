@@ -233,7 +233,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return int.tryParse(text.trim()) ?? 0;
   }
 
-
   Future<void> _openNewItemDialog() async {
     _newType = 'medicamento';
     _nameCtrl.clear();
@@ -566,7 +565,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     Navigator.of(context).pop();
   }
 
-
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredItems;
@@ -585,11 +583,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
         ),
         centerTitle: true,
-        leading: Builder(
-          builder: (ctx) => IconButton(
-            icon: const Icon(Icons.menu, color: ClickVetColors.goldDark),
-            onPressed: () => Scaffold.of(ctx).openDrawer(),
+        // 🔹 AGORA: botão de voltar em vez do menu
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: ClickVetColors.goldDark,
           ),
+          onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
           Padding(
@@ -629,7 +629,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               TextField(
                 decoration: InputDecoration(
                   hintText: 'Buscar produtos...',
@@ -684,7 +683,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   _FilterChip(
                     label: 'Remédios',
                     selected: _selectedTab == 'medicamento',
-                    onTap: () => setState(() => _selectedTab = 'medicamento'),
+                    onTap: () =>
+                        setState(() => _selectedTab = 'medicamento'),
                   ),
                   const SizedBox(width: 8),
                   _FilterChip(
@@ -750,8 +750,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
               if (low.isNotEmpty)
                 Container(
                   width: double.infinity,
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 10),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEFCE8),
                     borderRadius: BorderRadius.circular(16),
@@ -784,32 +784,35 @@ class _InventoryScreenState extends State<InventoryScreen> {
               const SizedBox(height: 16),
 
               if (filtered.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 32),
-                  child: Column(
-                    children: const [
-                      Icon(
-                        Icons.inventory_2_outlined,
-                        size: 54,
-                        color: ClickVetColors.goldDark,
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Nenhum item encontrado',
-                        style: TextStyle(
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.inventory_2_outlined,
+                          size: 54,
                           color: ClickVetColors.goldDark,
-                          fontWeight: FontWeight.w600,
                         ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Tente ajustar os filtros de busca.',
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 12,
+                        SizedBox(height: 8),
+                        Text(
+                          'Nenhum item encontrado',
+                          style: TextStyle(
+                            color: ClickVetColors.goldDark,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 4),
+                        Text(
+                          'Tente ajustar os filtros de busca.',
+                          style: TextStyle(
+                            color: Colors.black54,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 )
               else
@@ -837,7 +840,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 }
-
 
 class _InventoryItem {
   final int id;
@@ -886,8 +888,7 @@ class _FilterChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding:
-        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(999),
@@ -1291,7 +1292,6 @@ class _InventoryCard extends StatelessWidget {
     );
   }
 }
-
 
 class _FieldLabel extends StatelessWidget {
   const _FieldLabel(this.text, {super.key});

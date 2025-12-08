@@ -143,7 +143,6 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
             onFinancialDashboard: () {
-              Navigator.pop(context);
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const FinancialDashboardScreen()),
               );
