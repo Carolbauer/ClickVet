@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app/theme/clickvet_colors.dart';
 
 enum DrawerItemKey {
   home,
@@ -17,6 +18,7 @@ class AppDrawer extends StatelessWidget {
     super.key,
     required this.userName,
     required this.crmv,
+    this.photoUrl,
     this.selectedKey,
     this.onHome,
     this.onAgenda,
@@ -33,6 +35,7 @@ class AppDrawer extends StatelessWidget {
 
   final String userName;
   final String crmv;
+  final String? photoUrl;
 
   final DrawerItemKey? selectedKey;
 
@@ -48,12 +51,6 @@ class AppDrawer extends StatelessWidget {
   final VoidCallback? onLogout;
   final VoidCallback? onFinancialDashboard;
 
-  // ClickVet cores
-  static const kCvPrimary   = Color(0xFFB8860B); // dourado médio
-  static const kCvLight     = Color(0xFFD4AF37); // dourado claro
-  static const kCvSecondary = Color(0xFF8B6914); // dourado escuro
-  static const kGoldDark    = Color(0xFF8B6914);
-
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -67,27 +64,68 @@ class AppDrawer extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
-                  colors: [kCvLight, kCvPrimary],
+                  colors: [ClickVetColors.goldLight, ClickVetColors.gold],
                 ),
               ),
               child: SafeArea(
                 bottom: false,
-                child: ListTile(
-                  leading: CircleAvatar(
-                    radius: 26,
-                    backgroundColor: Colors.white.withOpacity(.2),
-                    child: const Icon(Icons.person, size: 32, color: Colors.white),
-                  ),
-                  title: Text(
-                    userName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: const Text('CRMV: ', style: TextStyle(color: Colors.white70)),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Builder(
+                        builder: (context) {
+                          final hasPhoto = photoUrl != null && photoUrl!.isNotEmpty;
+                          return CircleAvatar(
+                            radius: 32,
+                            backgroundColor: Colors.white.withOpacity(.2),
+                            backgroundImage: hasPhoto
+                                ? NetworkImage(photoUrl!)
+                                : null,
+                            onBackgroundImageError: hasPhoto
+                                ? (exception, stackTrace) {
+                                    // Se houver erro ao carregar a imagem, mostra o ícone
+                                  }
+                                : null,
+                            child: !hasPhoto
+                                ? const Icon(Icons.person, size: 36, color: Colors.white)
+                                : null,
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              userName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'CRMV: ${crmv.isNotEmpty ? crmv : '—'}',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                        tooltip: 'Fechar',
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -136,8 +174,8 @@ class AppDrawer extends StatelessWidget {
                 ),
                 _item(
                   context,
-                  keyItem: DrawerItemKey.tutors,
-                  icon: Icons.money_off_outlined,
+                  keyItem: DrawerItemKey.financial,
+                  icon: Icons.account_balance_wallet_outlined,
                   label: 'Financeiro',
                   onTap: onFinancialDashboard,
                 ),
@@ -161,9 +199,18 @@ class AppDrawer extends StatelessWidget {
                 ),
 
                 ListTile(
-                  leading: const Icon(Icons.logout, color: kGoldDark),
-                  title: const Text('Sair', style: TextStyle(fontWeight: FontWeight.w600)),
+                  leading: const Icon(
+                    Icons.logout,
+                    color: ClickVetColors.goldDark,
+                  ),
+                  title: const Text(
+                    'Sair',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   onTap: onLogout,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ],
             ),
@@ -183,10 +230,22 @@ class AppDrawer extends StatelessWidget {
     final bool isSelected = selectedKey == keyItem;
 
     return ListTile(
-      leading: Icon(icon, color: kCvSecondary),
-      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-      tileColor: isSelected ? kCvPrimary.withOpacity(0.10) : null,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      leading: Icon(
+        icon,
+        color: ClickVetColors.goldDark,
+      ),
+      title: Text(
+        label,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      tileColor: isSelected
+          ? ClickVetColors.gold.withOpacity(0.10)
+          : null,
+      selected: isSelected,
+      selectedTileColor: ClickVetColors.gold.withOpacity(0.10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       onTap: () {
         onTap?.call();
       },

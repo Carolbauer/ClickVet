@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:app/theme/clickvet_colors.dart';
 import 'package:app/widgets/vet_scaffold.dart';
 import 'package:app/widgets/app_drawer.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -16,105 +18,37 @@ class _InventoryScreenState extends State<InventoryScreen> {
   String _searchTerm = '';
   String _selectedTab = 'all';
 
-  // Lista de itens de estoque (mock)
-  final List<_InventoryItem> _items = [
-    _InventoryItem(
-      id: 1,
-      name: 'Vacina V10',
-      type: 'vacina',
-      quantity: 5,
-      minStock: 10,
-      cost: 25.00,
-      price: 80.00,
-      supplier: 'BioVet',
-      batch: 'VAC2024-001',
-      expiryDate: DateTime(2024, 12, 31),
-    ),
-    _InventoryItem(
-      id: 2,
-      name: 'Antibiótico Amoxicilina 500mg',
-      type: 'medicamento',
-      quantity: 8,
-      minStock: 15,
-      cost: 12.50,
-      price: 35.00,
-      supplier: 'FarmaVet',
-      batch: 'MED2024-045',
-      expiryDate: DateTime(2025, 6, 30),
-    ),
-    _InventoryItem(
-      id: 3,
-      name: 'Ração Premium 15kg',
-      type: 'produto',
-      quantity: 3,
-      minStock: 10,
-      cost: 85.00,
-      price: 180.00,
-      supplier: 'Pet Food Brasil',
-      batch: 'RAC2024-120',
-      expiryDate: DateTime(2024, 8, 15),
-    ),
-    _InventoryItem(
-      id: 4,
-      name: 'Vacina Antirrábica',
-      type: 'vacina',
-      quantity: 15,
-      minStock: 10,
-      cost: 18.00,
-      price: 60.00,
-      supplier: 'BioVet',
-      batch: 'VAC2024-002',
-      expiryDate: DateTime(2024, 11, 30),
-    ),
-    _InventoryItem(
-      id: 5,
-      name: 'Anti-inflamatório Meloxicam',
-      type: 'medicamento',
-      quantity: 20,
-      minStock: 15,
-      cost: 15.00,
-      price: 42.00,
-      supplier: 'FarmaVet',
-      batch: 'MED2024-089',
-      expiryDate: DateTime(2025, 3, 31),
-    ),
-    _InventoryItem(
-      id: 6,
-      name: 'Shampoo Antipulgas',
-      type: 'produto',
-      quantity: 12,
-      minStock: 8,
-      cost: 22.00,
-      price: 55.00,
-      supplier: 'Pet Care',
-      batch: 'PRO2024-015',
-      expiryDate: DateTime(2026, 1, 31),
-    ),
-    _InventoryItem(
-      id: 7,
-      name: 'Vermífugo Comprimido',
-      type: 'medicamento',
-      quantity: 25,
-      minStock: 20,
-      cost: 8.00,
-      price: 25.00,
-      supplier: 'FarmaVet',
-      batch: 'MED2024-103',
-      expiryDate: DateTime(2025, 9, 30),
-    ),
-    _InventoryItem(
-      id: 8,
-      name: 'Coleira Antipulgas',
-      type: 'produto',
-      quantity: 18,
-      minStock: 10,
-      cost: 32.00,
-      price: 75.00,
-      supplier: 'Pet Care',
-      batch: 'PRO2024-027',
-      expiryDate: DateTime(2026, 12, 31),
-    ),
-  ];
+  Stream<QuerySnapshot<Map<String, dynamic>>> _inventoryStream(String uid) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('inventory')
+        .orderBy('name')
+        .snapshots();
+  }
+
+  List<_InventoryItem> _itemsFromDocs(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+    return docs.map((doc) {
+      final data = doc.data();
+      final expiryDate = data['expiryDate'] as Timestamp?;
+      
+      return _InventoryItem(
+        id: doc.id.hashCode,
+        docId: doc.id,
+        name: (data['name'] ?? 'Sem nome') as String,
+        type: (data['type'] ?? 'produto') as String,
+        quantity: (data['quantity'] as num?)?.toInt() ?? 0,
+        minStock: (data['minStock'] as num?)?.toInt() ?? 0,
+        cost: (data['cost'] as num?)?.toDouble() ?? 0.0,
+        price: (data['price'] as num?)?.toDouble() ?? 0.0,
+        supplier: (data['supplier'] ?? '') as String,
+        batch: (data['batch'] ?? '') as String,
+        expiryDate: expiryDate?.toDate() ?? DateTime.now().add(const Duration(days: 365)),
+      );
+    }).toList();
+  }
+
+  // Lista removida - agora vem do Firestore via StreamBuilder
 
   String _newType = 'medicamento';
   final _nameCtrl = TextEditingController();
@@ -140,8 +74,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
     super.dispose();
   }
 
-  List<_InventoryItem> get _filteredItems {
-    return _items.where((item) {
+  List<_InventoryItem> _filteredItems(List<_InventoryItem> items) {
+    return items.where((item) {
       final term = _searchTerm.toLowerCase();
       final matchesSearch = term.isEmpty ||
           item.name.toLowerCase().contains(term) ||
@@ -154,21 +88,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
     }).toList();
   }
 
-  List<_InventoryItem> get _lowStockItems {
-    return _filteredItems
+  List<_InventoryItem> _lowStockItems(List<_InventoryItem> items) {
+    return items
         .where((item) => item.quantity <= item.minStock)
         .toList();
   }
 
-  double get _totalValue {
-    return _filteredItems.fold(
+  double _totalValue(List<_InventoryItem> items) {
+    return items.fold(
       0.0,
           (sum, item) => sum + (item.cost * item.quantity),
     );
   }
 
-  double get _potentialRevenue {
-    return _filteredItems.fold(
+  double _potentialRevenue(List<_InventoryItem> items) {
+    return items.fold(
       0.0,
           (sum, item) => sum + (item.price * item.quantity),
     );
@@ -535,7 +469,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  void _handleSaveNewItem() {
+  Future<void> _handleSaveNewItem() async {
     if (_nameCtrl.text.trim().isEmpty || _validityDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -545,30 +479,81 @@ class _InventoryScreenState extends State<InventoryScreen> {
       return;
     }
 
-    final newItem = _InventoryItem(
-      id: _items.length + 1,
-      name: _nameCtrl.text.trim(),
-      type: _newType,
-      quantity: _parseInt(_qtyCtrl.text),
-      minStock: _parseInt(_minStockCtrl.text),
-      cost: _parseMoney(_costCtrl.text),
-      price: _parseMoney(_priceCtrl.text),
-      supplier: _supplierCtrl.text.trim(),
-      batch: _batchCtrl.text.trim(),
-      expiryDate: _validityDate!,
-    );
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Você precisa estar logado para salvar itens.'),
+        ),
+      );
+      return;
+    }
 
-    setState(() {
-      _items.add(newItem);
-    });
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('inventory')
+          .add({
+        'name': _nameCtrl.text.trim(),
+        'type': _newType,
+        'quantity': _parseInt(_qtyCtrl.text),
+        'minStock': _parseInt(_minStockCtrl.text),
+        'cost': _parseMoney(_costCtrl.text),
+        'price': _parseMoney(_priceCtrl.text),
+        'supplier': _supplierCtrl.text.trim(),
+        'batch': _batchCtrl.text.trim(),
+        'expiryDate': Timestamp.fromDate(_validityDate!),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-    Navigator.of(context).pop();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Item adicionado ao estoque!'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao salvar: $e'),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredItems;
-    final low = _lowStockItems;
+    final user = FirebaseAuth.instance.currentUser;
+    
+    if (user == null) {
+      return VetScaffold(
+        selectedKey: DrawerItemKey.financial,
+        appBar: AppBar(
+          backgroundColor: ClickVetColors.bg,
+          elevation: 0,
+          title: const Text(
+            'Estoque',
+            style: TextStyle(
+              color: ClickVetColors.gold,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          centerTitle: true,
+        ),
+        body: const Center(
+          child: Text(
+            'Você precisa estar logado para visualizar o estoque.',
+            style: TextStyle(
+              color: ClickVetColors.goldDark,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+    }
 
     return VetScaffold(
       selectedKey: DrawerItemKey.financial,
@@ -624,217 +609,243 @@ class _InventoryScreenState extends State<InventoryScreen> {
       ),
       body: Container(
         color: ClickVetColors.bg,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'Buscar produtos...',
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: ClickVetColors.goldDark,
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(
-                      color: ClickVetColors.gold,
-                      width: 1.4,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(
-                      color: ClickVetColors.goldDark,
-                      width: 1.8,
-                    ),
-                  ),
+        child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: _inventoryStream(user.uid),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: ClickVetColors.gold,
                 ),
-                onChanged: (v) {
-                  setState(() => _searchTerm = v);
-                },
-              ),
-              const SizedBox(height: 10),
+              );
+            }
 
-              Row(
+            if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  'Erro ao carregar estoque: ${snapshot.error}',
+                  style: const TextStyle(color: ClickVetColors.goldDark),
+                ),
+              );
+            }
+
+            final allItems = _itemsFromDocs(snapshot.data?.docs ?? []);
+            final filtered = _filteredItems(allItems);
+            final low = _lowStockItems(filtered);
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _FilterChip(
-                    label: 'Todos',
-                    selected: _selectedTab == 'all',
-                    onTap: () => setState(() => _selectedTab = 'all'),
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Buscar produtos...',
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: ClickVetColors.goldDark,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: const BorderSide(
+                          color: ClickVetColors.gold,
+                          width: 1.4,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: const BorderSide(
+                          color: ClickVetColors.goldDark,
+                          width: 1.8,
+                        ),
+                      ),
+                    ),
+                    onChanged: (v) {
+                      setState(() => _searchTerm = v);
+                    },
                   ),
-                  const SizedBox(width: 8),
-                  _FilterChip(
-                    label: 'Vacinas',
-                    selected: _selectedTab == 'vacina',
-                    onTap: () => setState(() => _selectedTab = 'vacina'),
-                  ),
-                  const SizedBox(width: 8),
-                  _FilterChip(
-                    label: 'Remédios',
-                    selected: _selectedTab == 'medicamento',
-                    onTap: () =>
-                        setState(() => _selectedTab = 'medicamento'),
-                  ),
-                  const SizedBox(width: 8),
-                  _FilterChip(
-                    label: 'Produtos',
-                    selected: _selectedTab == 'produto',
-                    onTap: () => setState(() => _selectedTab = 'produto'),
-                  ),
-                ],
-              ),
+                  const SizedBox(height: 10),
 
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _SummaryCard(
-                      icon: Icons.inventory_2_outlined,
-                      iconColor: ClickVetColors.goldDark,
-                      title: 'Itens',
-                      value: filtered.length.toString(),
-                      borderColor: ClickVetColors.gold,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _SummaryCard(
-                      icon: Icons.warning_amber_rounded,
-                      iconColor: const Color(0xFFCA8A04),
-                      title: 'Baixo',
-                      value: low.length.toString(),
-                      borderColor: const Color(0xFFCA8A04),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _SummaryCard(
-                      icon: Icons.savings_outlined,
-                      iconColor: ClickVetColors.goldDark,
-                      title: 'Valor Estoque',
-                      value: _formatMoney(_totalValue),
-                      borderColor: ClickVetColors.gold,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _SummaryCard(
-                      icon: Icons.attach_money_rounded,
-                      iconColor: ClickVetColors.goldDark,
-                      title: 'Valor Venda',
-                      value: _formatMoney(_potentialRevenue),
-                      borderColor: ClickVetColors.gold,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              if (low.isNotEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEFCE8),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xFFFACC15),
-                      width: 1.6,
-                    ),
-                  ),
-                  child: Row(
+                  Row(
                     children: [
-                      const Icon(
-                        Icons.warning_amber_outlined,
-                        color: Color(0xFFCA8A04),
-                        size: 20,
+                      _FilterChip(
+                        label: 'Todos',
+                        selected: _selectedTab == 'all',
+                        onTap: () => setState(() => _selectedTab = 'all'),
                       ),
                       const SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Vacinas',
+                        selected: _selectedTab == 'vacina',
+                        onTap: () => setState(() => _selectedTab = 'vacina'),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Remédios',
+                        selected: _selectedTab == 'medicamento',
+                        onTap: () =>
+                            setState(() => _selectedTab = 'medicamento'),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Produtos',
+                        selected: _selectedTab == 'produto',
+                        onTap: () => setState(() => _selectedTab = 'produto'),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Row(
+                    children: [
                       Expanded(
-                        child: Text(
-                          '${low.length} item(ns) com estoque baixo',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF854D0E),
-                          ),
+                        child: _SummaryCard(
+                          icon: Icons.inventory_2_outlined,
+                          iconColor: ClickVetColors.goldDark,
+                          title: 'Itens',
+                          value: filtered.length.toString(),
+                          borderColor: ClickVetColors.gold,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _SummaryCard(
+                          icon: Icons.warning_amber_rounded,
+                          iconColor: const Color(0xFFCA8A04),
+                          title: 'Baixo',
+                          value: low.length.toString(),
+                          borderColor: const Color(0xFFCA8A04),
                         ),
                       ),
                     ],
                   ),
-                ),
-
-              const SizedBox(height: 16),
-
-              if (filtered.isEmpty)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: 32),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.inventory_2_outlined,
-                          size: 54,
-                          color: ClickVetColors.goldDark,
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SummaryCard(
+                          icon: Icons.savings_outlined,
+                          iconColor: ClickVetColors.goldDark,
+                          title: 'Valor Estoque',
+                          value: _formatMoney(_totalValue(filtered)),
+                          borderColor: ClickVetColors.gold,
                         ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Nenhum item encontrado',
-                          style: TextStyle(
-                            color: ClickVetColors.goldDark,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _SummaryCard(
+                          icon: Icons.attach_money_rounded,
+                          iconColor: ClickVetColors.goldDark,
+                          title: 'Valor Venda',
+                          value: _formatMoney(_potentialRevenue(filtered)),
+                          borderColor: ClickVetColors.gold,
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Tente ajustar os filtros de busca.',
-                          style: TextStyle(
-                            color: Colors.black54,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                )
-              else
-                Column(
-                  children: filtered
-                      .map(
-                        (item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _InventoryCard(
-                        item: item,
-                        typeIcon: _typeIcon(item.type),
-                        typeColor: _typeColor(item.type),
-                        typeLabel: _typeLabel(item.type),
-                        formatMoney: _formatMoney,
-                        formatDate: _formatDate,
+
+                  const SizedBox(height: 16),
+
+                  if (low.isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEFCE8),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFFFACC15),
+                          width: 1.6,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.warning_amber_outlined,
+                            color: Color(0xFFCA8A04),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${low.length} item(ns) com estoque baixo',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF854D0E),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  )
-                      .toList(),
-                ),
-            ],
-          ),
+
+                  const SizedBox(height: 16),
+
+                  if (filtered.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.inventory_2_outlined,
+                              size: 54,
+                              color: ClickVetColors.goldDark,
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'Nenhum item encontrado',
+                              style: TextStyle(
+                                color: ClickVetColors.goldDark,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Tente ajustar os filtros de busca.',
+                              style: TextStyle(
+                                color: Colors.black54,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    Column(
+                      children: filtered
+                          .map(
+                            (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _InventoryCard(
+                            item: item,
+                            typeIcon: _typeIcon(item.type),
+                            typeColor: _typeColor(item.type),
+                            typeLabel: _typeLabel(item.type),
+                            formatMoney: _formatMoney,
+                            formatDate: _formatDate,
+                          ),
+                        ),
+                      )
+                          .toList(),
+                    ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -843,6 +854,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
 class _InventoryItem {
   final int id;
+  final String docId;
   final String name;
   final String type;
   final int quantity;
@@ -855,6 +867,7 @@ class _InventoryItem {
 
   _InventoryItem({
     required this.id,
+    required this.docId,
     required this.name,
     required this.type,
     required this.quantity,

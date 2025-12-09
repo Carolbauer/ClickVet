@@ -1,8 +1,10 @@
 import 'package:app/screens/edit_tutor_screen.dart';
+import 'package:app/screens/medical_record_screen.dart';
 import 'package:app/widgets/app_drawer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:app/screens/register_tutor_screen.dart';
 import 'package:app/screens/home_screen.dart';
@@ -44,6 +46,339 @@ class _TutorListScreenState extends State<TutorListScreen> {
       return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
     }
     return '—';
+  }
+
+  Future<void> _openWhatsApp(BuildContext context, String phone) async {
+    final clean = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (clean.isEmpty) return;
+    
+    final uri = Uri.parse('https://wa.me/55$clean');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível abrir o WhatsApp.')),
+      );
+    }
+  }
+
+  Future<void> _openCall(BuildContext context, String phone) async {
+    final clean = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (clean.isEmpty) return;
+    
+    final uri = Uri.parse('tel:$clean');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível abrir o discador.')),
+      );
+    }
+  }
+
+  void _contactTutor(BuildContext context, String phone) {
+    final cleanPhone = phone.trim();
+
+    if (cleanPhone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tutor sem telefone cadastrado.')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 48,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Contato do tutor',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: ClickVetColors.goldDark,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  cleanPhone,
+                  style: const TextStyle(color: Colors.black54),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _openWhatsApp(context, cleanPhone);
+                        },
+                        icon: const Icon(Icons.chat, size: 18),
+                        label: const Text('WhatsApp'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _openCall(context, cleanPhone);
+                        },
+                        icon: const Icon(Icons.phone, size: 18),
+                        label: const Text('Ligar'),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                              color: ClickVetColors.gold, width: 1.4),
+                          foregroundColor: ClickVetColors.goldDark,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showTutorPets(BuildContext context, String vetUid, String tutorId, String tutorName) async {
+    // Query sem orderBy para evitar necessidade de índice composto
+    // Ordenaremos no cliente
+    final petsStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(vetUid)
+        .collection('pets')
+        .where('tutorId', isEqualTo: tutorId)
+        .snapshots();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: petsStream,
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                final allDocs = snap.data?.docs ?? [];
+                // Ordenar por nome no cliente
+                final docs = List.from(allDocs)
+                  ..sort((a, b) {
+                    final nameA = (a.data()['name'] ?? '').toString().toLowerCase();
+                    final nameB = (b.data()['name'] ?? '').toString().toLowerCase();
+                    return nameA.compareTo(nameB);
+                  });
+
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: ClickVetColors.bg,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(top: 12),
+                        width: 48,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: Colors.black12,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Pets de $tutorName',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: ClickVetColors.goldDark,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${docs.length} ${docs.length == 1 ? "pet cadastrado" : "pets cadastrados"}',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: docs.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    Icon(
+                                      Icons.pets_outlined,
+                                      size: 64,
+                                      color: ClickVetColors.gold,
+                                    ),
+                                    SizedBox(height: 12),
+                                    Text(
+                                      'Nenhum pet cadastrado',
+                                      style: TextStyle(
+                                        color: ClickVetColors.goldDark,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.separated(
+                                controller: scrollController,
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                itemCount: docs.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                                itemBuilder: (context, index) {
+                                  final petData = docs[index].data();
+                                  final petId = docs[index].id;
+                                  final petName = (petData['name'] ?? '—').toString();
+                                  final breed = (petData['breed'] ?? '—').toString();
+                                  final species = (petData['species'] ?? '').toString();
+
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: ClickVetColors.gold,
+                                        width: 1.6,
+                                      ),
+                                    ),
+                                    padding: const EdgeInsets.all(14),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 48,
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            color: ClickVetColors.gold.withOpacity(0.08),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.pets,
+                                            color: ClickVetColors.gold,
+                                            size: 26,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                petName,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                '$breed${species.isNotEmpty ? ' • $species' : ''}',
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.black54,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.arrow_forward_ios,
+                                            size: 18,
+                                            color: ClickVetColors.goldDark,
+                                          ),
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) => MedicalRecordScreen(
+                                                  petId: petId,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -217,10 +552,28 @@ class _TutorListScreenState extends State<TutorListScreen> {
                     }).toList();
 
                     final totalTutors = filtered.length;
-                    final totalPets = filtered.fold<int>(0, (sum, d) {
-                      final pc = (d.data()['petsCount'] ?? 0);
-                      return sum + (pc is int ? pc : 0);
-                    });
+                    
+                    // Buscar todos os pets para calcular contagem em tempo real
+                    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(vet.uid)
+                          .collection('pets')
+                          .snapshots(),
+                      builder: (petsContext, petsSnap) {
+                        final allPets = petsSnap.data?.docs ?? [];
+                        
+                        // Calcular total de pets e pets por tutor em tempo real
+                        final totalPets = allPets.length;
+                        
+                        // Criar mapa de tutorId -> contagem de pets
+                        final petsByTutor = <String, int>{};
+                        for (final petDoc in allPets) {
+                          final tutorId = (petDoc.data()['tutorId'] ?? '').toString();
+                          if (tutorId.isNotEmpty) {
+                            petsByTutor[tutorId] = (petsByTutor[tutorId] ?? 0) + 1;
+                          }
+                        }
 
                     int totalPages =
                     (filtered.length / _perPage).ceil().clamp(1, 999);
@@ -262,30 +615,36 @@ class _TutorListScreenState extends State<TutorListScreen> {
                             itemBuilder: (_, i) {
                               final m = pageDocs[i].data();
 
+                              final tutorId = pageDocs[i].id;
+                              // Usar contagem em tempo real ou 0 se não houver pets
+                              final realPetsCount = petsByTutor[tutorId] ?? 0;
+                              
                               return _TutorCard(
+                                tutorId: tutorId,
                                 name: m['name'] ?? '—',
                                 cpf: m['cpf'] ?? '—',
                                 phone: m['phone'] ?? '—',
                                 email: m['email'] ?? '—',
                                 address:
                                 '${m['address'] ?? '—'}, ${m['city'] ?? ''}',
-                                petsCount:
-                                (m['petsCount'] is int) ? m['petsCount'] : 0,
+                                petsCount: realPetsCount,
                                 registerDate:
                                 _fmtDate(m['registeredAt']),
-                                onPets: () {},
+                                onPets: () {
+                                  _showTutorPets(context, vet.uid, tutorId, m['name'] ?? 'Tutor');
+                                },
                                 onEdit: () {
-                                  final String currentId = pageDocs[i].id;
-
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
                                       builder: (_) => EditTutorScreen(
-                                        tutorId: currentId,
+                                        tutorId: tutorId,
                                       ),
                                     ),
                                   );
                                 },
-                                onCall: () {},
+                                onCall: () {
+                                  _contactTutor(context, m['phone'] ?? '');
+                                },
                               );
                             },
                           ),
@@ -334,6 +693,8 @@ class _TutorListScreenState extends State<TutorListScreen> {
                           ),
                         ],
                       ],
+                    );
+                      },
                     );
                   },
                 ),
@@ -393,6 +754,7 @@ class _StatBox extends StatelessWidget {
 
 class _TutorCard extends StatelessWidget {
   const _TutorCard({
+    required this.tutorId,
     required this.name,
     required this.cpf,
     required this.phone,
@@ -405,6 +767,7 @@ class _TutorCard extends StatelessWidget {
     required this.onCall,
   });
 
+  final String tutorId;
   final String name;
   final String cpf;
   final String phone;
@@ -479,7 +842,7 @@ class _TutorCard extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onPets,
                 icon: const Icon(
-                  Icons.favorite_border,
+                  Icons.pets,
                   size: 18,
                   color: ClickVetColors.goldDark,
                 ),

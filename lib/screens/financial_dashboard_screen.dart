@@ -39,13 +39,6 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
     }
   }
 
-  String _formatDate(DateTime d) {
-    final dd = d.day.toString().padLeft(2, '0');
-    final mm = d.month.toString().padLeft(2, '0');
-    final yy = d.year.toString();
-    return '$dd/$mm/$yy';
-  }
-
   DateTime _periodStartDate() {
     final now = DateTime.now();
     if (_selectedPeriod == 'week') {
@@ -90,12 +83,13 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
     }
 
     // 🔹 Usa a mesma coleção da tela de lançamentos
+    // Filtra por período no cliente (evita necessidade de índice composto no Firestore)
     final transactionsStream = FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('financial_entries')
         .orderBy('date', descending: true)
-        .limit(50)
+        .limit(200) // Limita para performance
         .snapshots();
 
     final inventoryStream = FirebaseFirestore.instance
@@ -205,8 +199,18 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                     );
                   }
 
-                  final docs = snapshot.data?.docs ?? [];
+                  final allDocs = snapshot.data?.docs ?? [];
                   final periodStart = _periodStartDate();
+                  
+                  // Filtrar por período no cliente (evita necessidade de índice composto)
+                  final docs = allDocs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>? ?? {};
+                    final ts = data['date'] as Timestamp?;
+                    if (ts == null) return false;
+                    final d = ts.toDate();
+                    return d.isAfter(periodStart.subtract(const Duration(seconds: 1))) &&
+                           d.isBefore(DateTime.now().add(const Duration(seconds: 1)));
+                  }).toList();
 
                   double totalRevenue = 0;
                   double totalExpenses = 0;
@@ -218,7 +222,6 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                     final ts = data['date'] as Timestamp?;
                     if (ts == null) continue;
                     final d = ts.toDate();
-                    if (d.isBefore(periodStart)) continue;
 
                     final amount =
                         (data['amount'] as num?)?.toDouble() ?? 0.0;

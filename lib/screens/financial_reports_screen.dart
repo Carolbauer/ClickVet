@@ -17,8 +17,17 @@ class FinancialReportsScreen extends StatefulWidget {
 }
 
 class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
-  DateTime _startDate = DateTime(2024, 1, 1);
-  DateTime _endDate = DateTime(2024, 1, 31);
+  // Datas padrão: mês atual
+  late DateTime _startDate;
+  late DateTime _endDate;
+  
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _startDate = DateTime(now.year, now.month, 1);
+    _endDate = DateTime(now.year, now.month + 1, 0); // último dia do mês
+  }
 
   // Dados calculados a partir do Firestore
   _FinancialReportData? _reportData;
@@ -95,15 +104,27 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
     final end =
     DateTime(_endDate.year, _endDate.month, _endDate.day, 23, 59, 59);
 
+    // Usa range query para evitar necessidade de índice composto
+    // Busca todos os docs e filtra no cliente (mais seguro, funciona sempre)
+    // Alternativa: criar índice composto no Firestore Console
     final snap = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('financial_entries')
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
+        .orderBy('date', descending: false)
         .get();
+    
+    // Filtrar por período no cliente para evitar índice composto
+    final filteredDocs = snap.docs.where((doc) {
+      final data = doc.data();
+      final ts = data['date'] as Timestamp?;
+      if (ts == null) return false;
+      final date = ts.toDate();
+      return date.isAfter(start.subtract(const Duration(seconds: 1))) &&
+             date.isBefore(end.add(const Duration(seconds: 1)));
+    }).toList();
 
-    final entries = snap.docs.map((d) {
+    final entries = filteredDocs.map((d) {
       final m = d.data();
       final amountRaw = m['amount'] ?? 0;
       final double amount = amountRaw is int

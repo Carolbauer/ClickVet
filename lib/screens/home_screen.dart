@@ -67,12 +67,14 @@ class _HomeScreenState extends State<HomeScreen> {
         final data = snap.data!.data()!;
         final String name = (data['name'] ?? 'Veterinário') as String;
         final String crmv = (data['crmv'] ?? '-') as String;
+        final photoUrl = data['photoUrl'] as String?;
 
         return Scaffold(
           backgroundColor: kBg,
           drawer: AppDrawer(
             userName: name,
             crmv: crmv,
+            photoUrl: photoUrl,
             selectedKey: DrawerItemKey.home,
             onLogout: () async {
               Navigator.pop(context);

@@ -1,6 +1,5 @@
 import 'package:app/screens/agenda_screen.dart';
 import 'package:app/screens/financial_dashboard_screen.dart';
-import 'package:app/screens/medical_record_screen.dart';
 import 'package:app/screens/new_schedule_screen.dart';
 import 'package:app/screens/patients_screen.dart';
 import 'package:app/screens/profile_screen.dart';
@@ -80,12 +79,14 @@ class _VetScaffoldState extends State<VetScaffold> {
         final data = snap.data!.data()!;
         final name = (data['name'] ?? 'Veterinário') as String;
         final crmv = (data['crmv'] ?? '-') as String;
+        final photoUrl = data['photoUrl'] as String?;
 
         return Scaffold(
           backgroundColor: ClickVetColors.bg,
           drawer: AppDrawer(
             userName: name,
             crmv: crmv,
+            photoUrl: photoUrl,
             selectedKey: widget.selectedKey,
 
             onHome: () {
