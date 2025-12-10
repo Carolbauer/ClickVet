@@ -174,8 +174,6 @@ class _TutorListScreenState extends State<TutorListScreen> {
   }
 
   Future<void> _showTutorPets(BuildContext context, String vetUid, String tutorId, String tutorName) async {
-    // Query sem orderBy para evitar necessidade de índice composto
-    // Ordenaremos no cliente
     final petsStream = FirebaseFirestore.instance
         .collection('users')
         .doc(vetUid)
@@ -207,7 +205,6 @@ class _TutorListScreenState extends State<TutorListScreen> {
                 }
 
                 final allDocs = snap.data?.docs ?? [];
-                // Ordenar por nome no cliente
                 final docs = List.from(allDocs)
                   ..sort((a, b) {
                     final nameA = (a.data()['name'] ?? '').toString().toLowerCase();
@@ -552,8 +549,7 @@ class _TutorListScreenState extends State<TutorListScreen> {
                     }).toList();
 
                     final totalTutors = filtered.length;
-                    
-                    // Buscar todos os pets para calcular contagem em tempo real
+
                     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                       stream: FirebaseFirestore.instance
                           .collection('users')
@@ -562,11 +558,9 @@ class _TutorListScreenState extends State<TutorListScreen> {
                           .snapshots(),
                       builder: (petsContext, petsSnap) {
                         final allPets = petsSnap.data?.docs ?? [];
-                        
-                        // Calcular total de pets e pets por tutor em tempo real
+
                         final totalPets = allPets.length;
-                        
-                        // Criar mapa de tutorId -> contagem de pets
+
                         final petsByTutor = <String, int>{};
                         for (final petDoc in allPets) {
                           final tutorId = (petDoc.data()['tutorId'] ?? '').toString();
@@ -616,7 +610,6 @@ class _TutorListScreenState extends State<TutorListScreen> {
                               final m = pageDocs[i].data();
 
                               final tutorId = pageDocs[i].id;
-                              // Usar contagem em tempo real ou 0 se não houver pets
                               final realPetsCount = petsByTutor[tutorId] ?? 0;
                               
                               return _TutorCard(

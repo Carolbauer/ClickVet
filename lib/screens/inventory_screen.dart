@@ -48,7 +48,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     }).toList();
   }
 
-  // Lista removida - agora vem do Firestore via StreamBuilder
 
   String _newType = 'medicamento';
   final _nameCtrl = TextEditingController();
@@ -568,7 +567,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
         ),
         centerTitle: true,
-        // 🔹 AGORA: botão de voltar em vez do menu
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_ios_new_rounded,

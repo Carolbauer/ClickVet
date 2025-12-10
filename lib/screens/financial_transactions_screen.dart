@@ -1,9 +1,6 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-// Firestore + Auth
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -45,7 +42,6 @@ class _FinancialTransactionsScreenState
   final TextEditingController _searchController = TextEditingController();
   TransactionType _filterType = TransactionType.all;
 
-  // AGORA: lista mutável preenchida pelo Firestore
   List<TransactionModel> _transactions = [];
 
   StreamSubscription<QuerySnapshot>? _sub;
@@ -59,7 +55,6 @@ class _FinancialTransactionsScreenState
   void _listenTransactions() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      // Você pode exibir um SnackBar avisando que precisa logar
       return;
     }
 
@@ -169,9 +164,8 @@ class _FinancialTransactionsScreenState
               'paymentMethod': transaction.paymentMethod,
               'type': typeString,
               'date': Timestamp.fromDate(transaction.date),
-              // opcional: 'createdAt': FieldValue.serverTimestamp(),
+
             });
-            // O listener em _listenTransactions() atualiza a lista automaticamente
           },
         ),
       ),

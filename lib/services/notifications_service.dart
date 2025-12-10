@@ -36,7 +36,6 @@ class NotificationsService {
       await init();
     }
 
-    // Se a data já passou, não agenda
     if (dateTime.isBefore(DateTime.now())) return;
 
     await _plugin.zonedSchedule(

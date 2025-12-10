@@ -84,7 +84,7 @@ class AppDrawer extends StatelessWidget {
                                 : null,
                             onBackgroundImageError: hasPhoto
                                 ? (exception, stackTrace) {
-                                    // Se houver erro ao carregar a imagem, mostra o ícone
+
                                   }
                                 : null,
                             child: !hasPhoto

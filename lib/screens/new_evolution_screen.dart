@@ -48,7 +48,6 @@ class _NewEvolutionScreenState extends State<NewEvolutionScreen> {
   String _examsSummary = '';
   String _surgeriesSummary = '';
 
-  // Controllers para dialogs
   final _vaccineNameCtrl = TextEditingController();
   final _vaccineDateCtrl = TextEditingController();
   final _vaccineNextDateCtrl = TextEditingController();
