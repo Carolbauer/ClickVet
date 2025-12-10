@@ -1,5 +1,6 @@
 import 'package:app/screens/login_screen.dart';
 import 'package:app/services/firebase_auth_service.dart';
+import 'package:app/services/notifications_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -17,6 +18,8 @@ void main() async {
   );
 
   final firebaseAuth = FirebaseAuthService();
+
+  await NotificationsService().init();
 
   runApp(const MyApp());
 }

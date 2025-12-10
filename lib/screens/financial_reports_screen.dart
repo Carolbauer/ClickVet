@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app/theme/clickvet_colors.dart';
-
-// Firestore + Auth
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-// PDF
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
@@ -17,7 +13,6 @@ class FinancialReportsScreen extends StatefulWidget {
 }
 
 class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
-  // Datas padrão: mês atual
   late DateTime _startDate;
   late DateTime _endDate;
   
@@ -29,7 +24,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
     _endDate = DateTime(now.year, now.month + 1, 0); // último dia do mês
   }
 
-  // Dados calculados a partir do Firestore
   _FinancialReportData? _reportData;
   bool _isLoading = false;
 
@@ -83,17 +77,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
     }
   }
 
-  /// Busca dados REAIS no Firestore
-  ///
-  /// 👉 Ajusta aqui se a tua estrutura for diferente:
-  /// collection: users/{uid}/financial_entries
-  /// campos esperados por lançamento:
-  /// - amount (Number)
-  /// - type: 'revenue' ou 'expense'
-  /// - category (String)
-  /// - serviceName (String opcional)
-  /// - paymentMethod (String opcional)
-  /// - date (Timestamp)
   Future<_FinancialReportData> _fetchReportData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -104,17 +87,13 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
     final end =
     DateTime(_endDate.year, _endDate.month, _endDate.day, 23, 59, 59);
 
-    // Usa range query para evitar necessidade de índice composto
-    // Busca todos os docs e filtra no cliente (mais seguro, funciona sempre)
-    // Alternativa: criar índice composto no Firestore Console
     final snap = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('financial_entries')
         .orderBy('date', descending: false)
         .get();
-    
-    // Filtrar por período no cliente para evitar índice composto
+
     final filteredDocs = snap.docs.where((doc) {
       final data = doc.data();
       final ts = data['date'] as Timestamp?;
@@ -133,7 +112,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
 
       return _FinancialEntry(
         amount: amount,
-        type: (m['type'] ?? 'revenue').toString(), // 'revenue' ou 'expense'
+        type: (m['type'] ?? 'revenue').toString(),
         category: (m['category'] ?? 'Outros').toString(),
         serviceName: (m['serviceName'] ?? '').toString(),
         paymentMethod: (m['paymentMethod'] ?? '').toString(),
@@ -251,7 +230,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
     }
   }
 
-  // PDF usando _reportData
   Future<void> _exportPdf() async {
     if (_reportData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -288,7 +266,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
               ),
               pw.SizedBox(height: 16),
 
-              // Resumo
               pw.Text(
                 'Resumo do Período',
                 style: pw.TextStyle(
@@ -311,7 +288,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
               ),
               pw.SizedBox(height: 16),
 
-              // Receitas por categoria
               pw.Text(
                 'Receitas por Categoria',
                 style: pw.TextStyle(
@@ -336,7 +312,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
               ),
               pw.SizedBox(height: 16),
 
-              // Despesas por categoria
               pw.Text(
                 'Despesas por Categoria',
                 style: pw.TextStyle(
@@ -361,7 +336,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
               ),
               pw.SizedBox(height: 16),
 
-              // Serviços mais realizados
               pw.Text(
                 'Serviços Mais Realizados',
                 style: pw.TextStyle(
@@ -386,7 +360,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
               ),
               pw.SizedBox(height: 16),
 
-              // Formas de pagamento
               pw.Text(
                 'Formas de Pagamento',
                 style: pw.TextStyle(
@@ -451,7 +424,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            // ícone no canto superior direito também exporta o PDF
             onPressed: _exportPdf,
             icon: const Icon(
               Icons.file_download,
@@ -465,7 +437,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ---- PERÍODO ----
             Row(
               children: [
                 Expanded(
@@ -531,7 +502,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
 
             const SizedBox(height: 16),
 
-            // ---- FATURAMENTO ----
             Container(
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
@@ -590,7 +560,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
 
             const SizedBox(height: 12),
 
-            // ---- DESPESAS E LUCRO ----
             Row(
               children: [
                 Expanded(
@@ -675,7 +644,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
 
             const SizedBox(height: 16),
 
-            // ---- RECEITAS POR CATEGORIA ----
             _SectionCard(
               title: 'Receitas por Categoria',
               icon: Icons.pie_chart_outline,
@@ -700,7 +668,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
 
             const SizedBox(height: 12),
 
-            // ---- DESPESAS POR CATEGORIA ----
             _SectionCard(
               title: 'Despesas por Categoria',
               icon: Icons.pie_chart_outline,
@@ -725,7 +692,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
 
             const SizedBox(height: 12),
 
-            // ---- SERVIÇOS MAIS REALIZADOS ----
             _SectionCard(
               title: 'Serviços Mais Realizados',
               child: Column(
@@ -795,7 +761,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
 
             const SizedBox(height: 12),
 
-            // ---- FORMAS DE PAGAMENTO ----
             _SectionCard(
               title: 'Formas de Pagamento',
               child: Column(
@@ -819,7 +784,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
 
             const SizedBox(height: 12),
 
-            // ---- EXPORTAR RELATÓRIO ----
             _SectionCard(
               title: 'Exportar Relatório',
               child: SizedBox(
@@ -864,11 +828,10 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
   }
 }
 
-// ----------------- MODELOS -----------------
 
 class _FinancialEntry {
   final double amount;
-  final String type; // 'revenue' ou 'expense'
+  final String type;
   final String category;
   final String? serviceName;
   final String? paymentMethod;

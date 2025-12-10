@@ -1,4 +1,5 @@
 import 'package:app/screens/new_evolution_screen.dart';
+import 'package:app/services/notifications_service.dart';
 import 'package:app/theme/clickvet_colors.dart';
 import 'package:app/widgets/vet_scaffold.dart';
 import 'package:app/widgets/app_drawer.dart';
@@ -19,13 +20,12 @@ class MedicalRecordScreen extends StatefulWidget {
 }
 
 class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
-  // --- CONTROLLERS / ESTADO DO POPUP DE ALERGIA ---
+//CONTROLLERS
   final TextEditingController _allergyNameCtrl = TextEditingController();
   final TextEditingController _allergyNotesCtrl = TextEditingController();
   String _allergySeverity = 'Moderada';
   bool _savingAllergy = false;
 
-  // --- CONTROLLERS / ESTADO DO POPUP DE VACINA ---
   final TextEditingController _vaccineNameCtrl = TextEditingController();
   final TextEditingController _vaccineBatchCtrl = TextEditingController();
   final TextEditingController _vaccineVetCtrl = TextEditingController();
@@ -33,7 +33,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
   DateTime? _vaccineNextDate;
   bool _savingVaccine = false;
 
-  // --- CONTROLLERS / ESTADO DO POPUP DE MEDICAMENTO ---
   final TextEditingController _medNameCtrl = TextEditingController();
   final TextEditingController _medDosageCtrl = TextEditingController();
   final TextEditingController _medFrequencyCtrl = TextEditingController();
@@ -41,7 +40,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
   DateTime? _medEndDate;
   bool _savingMedication = false;
 
-  // --- CONTROLLERS / ESTADO DO POPUP DE EXAME ---
   final TextEditingController _examNameCtrl = TextEditingController();
   final TextEditingController _examResultCtrl = TextEditingController();
   final TextEditingController _examNotesCtrl = TextEditingController();
@@ -49,14 +47,12 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
   DateTime? _examDate;
   bool _savingExam = false;
 
-  // --- CONTROLLERS / ESTADO DO POPUP DE CIRURGIA ---
   final TextEditingController _surgeryNameCtrl = TextEditingController();
   final TextEditingController _surgeryDescriptionCtrl = TextEditingController();
   final TextEditingController _surgeryVetCtrl = TextEditingController();
   DateTime? _surgeryDate;
   bool _savingSurgery = false;
 
-  // --- CONTROLLERS / ESTADO DO POPUP DE PESO ---
   final TextEditingController _weightCtrl = TextEditingController();
   DateTime? _weightDate;
   bool _savingWeight = false;
@@ -133,7 +129,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
     );
   }
 
-  // --------- DIALOG DE ALERGIA ---------
   Future<void> _openAllergyDialog({
     required String vetUid,
   }) async {
@@ -420,9 +415,9 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
     );
   }
 
-  // --------- DIALOG DE VACINA ---------
   Future<void> _openVaccineDialog({
     required String vetUid,
+    required String petName,
   }) async {
     _vaccineNameCtrl.clear();
     _vaccineBatchCtrl.clear();
@@ -774,7 +769,7 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
                         _savingVaccine = true;
                       });
 
-                      await FirebaseFirestore.instance
+                      final vaccineRef = await FirebaseFirestore.instance
                           .collection('users')
                           .doc(vetUid)
                           .collection('pets')
@@ -795,12 +790,48 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
                         'createdAt': FieldValue.serverTimestamp(),
                       });
 
+                      if (_vaccineNextDate != null && _vaccineNextDate!.isAfter(DateTime.now())) {
+                        try {
+                          final petDoc = await FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(vetUid)
+                              .collection('pets')
+                              .doc(widget.petId)
+                              .get();
+                          
+                          final petData = petDoc.data();
+                          final petName = petData?['name']?.toString() ?? 'pet';
+
+                          final notificationId = vaccineRef.id.hashCode;
+
+                          final notificationDateTime = DateTime(
+                            _vaccineNextDate!.year,
+                            _vaccineNextDate!.month,
+                            _vaccineNextDate!.day,
+                            9,
+                          );
+                          
+                          await NotificationsService().scheduleNotification(
+                            id: notificationId,
+                            dateTime: notificationDateTime,
+                            title: 'Lembrete de Vacina',
+                            body: 'É hora da próxima dose de $name para $petName',
+                          );
+                        } catch (notificationError) {
+                          debugPrint('Erro ao agendar notificação: $notificationError');
+                        }
+                      }
+
                       if (!mounted) return;
                       Navigator.of(ctx).pop();
 
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Vacina salva com sucesso!'),
+                        SnackBar(
+                          content: Text(
+                            _vaccineNextDate != null && _vaccineNextDate!.isAfter(DateTime.now())
+                                ? 'Vacina salva e lembrete agendado!'
+                                : 'Vacina salva com sucesso!',
+                          ),
                         ),
                       );
                     } catch (e) {
@@ -836,7 +867,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
     );
   }
 
-  // --------- DIALOG DE MEDICAMENTO ---------
   Future<void> _openMedicationDialog({
     required String vetUid,
   }) async {
@@ -1279,7 +1309,7 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
       },
     );
   }
-  // --------- DIALOG DE EXAME ---------
+
   Future<void> _openExamDialog({
     required String vetUid,
   }) async {
@@ -1682,7 +1712,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
     );
   }
 
-  // --------- DIALOG DE CIRURGIA ---------
   Future<void> _openSurgeryDialog({
     required String vetUid,
   }) async {
@@ -2035,7 +2064,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
     );
   }
 
-  // --------- DIALOG DE EVOLUÇÃO DE PESO ---------
   Future<void> _openWeightDialog({
     required String vetUid,
   }) async {
@@ -2424,7 +2452,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
                 child: Column(
                   children: [
 
-                    // CABEÇALHO PET
                     StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                       stream: petDocStream,
                       builder: (context, snap) {
@@ -2476,7 +2503,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
 
                     const SizedBox(height: 16),
 
-                    // ALERGIAS
                     StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                       stream: allergiesStream,
                       builder: (context, snap) {
@@ -2552,7 +2578,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
 
                     const SizedBox(height: 12),
 
-                    // VACINAS
                     StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                       stream: vaccinesStream,
                       builder: (context, snap) {
@@ -2626,9 +2651,13 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
                               label: 'Adicionar vacina',
                               color: const Color(0xFF16A34A),
                               onPressed: () {
-                                _openVaccineDialog(vetUid: vet.uid);
+                                _openVaccineDialog(
+                                  vetUid: vet.uid,
+                                  petName: '',
+                                );
                               },
                             ),
+
                           ],
                         );
                       },
@@ -2636,7 +2665,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
 
                     const SizedBox(height: 12),
 
-                    // MEDICAMENTOS (coleção própria)
                     StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                       stream: medicationsStream,
                       builder: (context, snap) {
@@ -2721,7 +2749,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
 
                     const SizedBox(height: 12),
 
-                    // EVOLUÇÕES / HISTÓRICO
                     StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                       stream: evolutionsStream,
                       builder: (context, snap) {
@@ -2840,7 +2867,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
 
                             const SizedBox(height: 12),
 
-                            // EXAMES - Stream separado
                             StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                               stream: examsStream,
                               builder: (context, snap) {
@@ -2863,7 +2889,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
 
                                 final docs = snap.data?.docs ?? [];
 
-                                // Combinar exames do stream com os das evoluções
                                 final allExams = <Map<String, dynamic>>[];
                                 for (var doc in docs) {
                                   final data = doc.data();
@@ -2886,7 +2911,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
                                     });
                                   }
                                 }
-                                // Ordenar por data (mais recente primeiro)
                                 allExams.sort((a, b) {
                                   final dateA = a['dateStr'] as String;
                                   final dateB = b['dateStr'] as String;
@@ -2946,7 +2970,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
 
                             const SizedBox(height: 12),
 
-                            // CIRURGIAS - Stream separado
                             StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                               stream: surgeriesStream,
                               builder: (context, snap) {
@@ -2969,7 +2992,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
 
                                 final docs = snap.data?.docs ?? [];
 
-                                // Combinar cirurgias do stream com as das evoluções
                                 final allSurgeries = <Map<String, dynamic>>[];
                                 for (var doc in docs) {
                                   allSurgeries.add(doc.data());
@@ -3036,7 +3058,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
 
                             const SizedBox(height: 12),
 
-                            // EVOLUÇÃO DE PESO - Stream separado
                             StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                               stream: weightRecordsStream,
                               builder: (context, snap) {
@@ -3059,7 +3080,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
 
                                 final docs = snap.data?.docs ?? [];
 
-                                // Combinar pesos do stream com os das evoluções
                                 final allWeights = <Map<String, dynamic>>[];
                                 for (var doc in docs) {
                                   final data = doc.data();
@@ -3076,7 +3096,7 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
                                     'dateStr': date,
                                   });
                                 }
-                                // Ordenar por data (mais recente primeiro)
+
                                 allWeights.sort((a, b) {
                                   final dateA = a['dateStr'] as String;
                                   final dateB = b['dateStr'] as String;
@@ -3138,7 +3158,7 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
               ),
             ),
 
-            // FAB Nova Evolução
+
             Positioned(
               right: 16,
               bottom: 16,
@@ -3147,7 +3167,6 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(30),
                   onTap: () async {
-                    // Buscar dados do pet para passar para a tela de evolução
                     final petDoc = await FirebaseFirestore.instance
                         .collection('users')
                         .doc(vet.uid)

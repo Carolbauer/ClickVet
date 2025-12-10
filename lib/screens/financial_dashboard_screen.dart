@@ -46,7 +46,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
     } else if (_selectedPeriod == 'year') {
       return DateTime(now.year, 1, 1);
     }
-    // default: mês
+
     return DateTime(now.year, now.month, 1);
   }
 
@@ -82,14 +82,12 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
       );
     }
 
-    // 🔹 Usa a mesma coleção da tela de lançamentos
-    // Filtra por período no cliente (evita necessidade de índice composto no Firestore)
     final transactionsStream = FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('financial_entries')
         .orderBy('date', descending: true)
-        .limit(200) // Limita para performance
+        .limit(200)
         .snapshots();
 
     final inventoryStream = FirebaseFirestore.instance
@@ -177,7 +175,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ================= LANÇAMENTOS / RESUMO =================
+
               StreamBuilder<QuerySnapshot>(
                 stream: transactionsStream,
                 builder: (context, snapshot) {
@@ -201,8 +199,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
 
                   final allDocs = snapshot.data?.docs ?? [];
                   final periodStart = _periodStartDate();
-                  
-                  // Filtrar por período no cliente (evita necessidade de índice composto)
+
                   final docs = allDocs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>? ?? {};
                     final ts = data['date'] as Timestamp?;
@@ -273,7 +270,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                         icon: Icons.trending_up_rounded,
                         iconColor: const Color(0xFF16A34A),
                         title: 'Receitas',
-                        badgeText: null, // por enquanto sem comparação %
+                        badgeText: null,
                         badgeBg: null,
                         badgeColor: null,
                         value: _formatMoney(totalRevenue),
@@ -297,7 +294,6 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                       ),
                       const SizedBox(height: 18),
 
-                      // AÇÕES RÁPIDAS
                       Row(
                         children: [
                           Expanded(
@@ -429,7 +425,6 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                 },
               ),
 
-              // ================= ESTOQUE BAIXO =================
               const SizedBox(height: 22),
               StreamBuilder<QuerySnapshot>(
                 stream: inventoryStream,
