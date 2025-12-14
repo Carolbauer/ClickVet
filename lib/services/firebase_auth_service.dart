@@ -25,10 +25,8 @@ class FirebaseAuthService {
 
   Future<UserCredential> signInWithGoogle() async {
     try {
-      // Abre o fluxo de login do Google
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
-      // Usuário cancelou o login
       if (googleUser == null) {
         throw Exception('Login com Google cancelado pelo usuário');
       }
@@ -44,7 +42,6 @@ class FirebaseAuthService {
       final userCredential =
       await firebaseAuth.signInWithCredential(credential);
 
-      // Cria/atualiza o documento do usuário no Firestore
       final user = userCredential.user;
       if (user != null) {
         final usersRef = FirebaseFirestore.instance.collection('users');
